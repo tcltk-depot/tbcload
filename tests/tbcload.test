@@ -1,0 +1,95 @@
+# tbcload tests: load and execute compiled .tbc files produced by compiler tests
+if {"::tcltest" ni [namespace children]} {
+    package require tcltest
+    namespace import -force ::tcltest::*
+}
+package require tbcload
+namespace eval ::tcltest {}
+
+set testDir [file normalize [file dirname [info script]]]
+# The compiler writes outputs to tclcompiler-1.9.0/tests/out
+set compOut [file join [file dirname [file dirname $testDir]] tclcompiler-1.9.0 tests out]
+
+set tbc1 [file join $compOut tc1.tbc]
+set tbc2 [file join $compOut tc2.tbc]
+set tbc3 [file join $compOut tc3.tbc]
+set tbc4 [file join $compOut tc4.tbc]
+set tbc5 [file join $compOut tc5.tbc]
+set tbc6 [file join $compOut tc6.tbc]
+set tbc1pre [file join $compOut tc1pre.tbc]
+set tbc1_default [file join [file dirname [file dirname $compOut]] tests tc1.tbc]
+
+# Skip tests gracefully if compiled files are not present
+::tcltest::testConstraint have_tbc_1 [file exists $tbc1]
+::tcltest::testConstraint have_tbc_2 [file exists $tbc2]
+::tcltest::testConstraint have_tbc_3 [file exists $tbc3]
+::tcltest::testConstraint have_tbc_4 [file exists $tbc4]
+::tcltest::testConstraint have_tbc_5 [file exists $tbc5]
+::tcltest::testConstraint have_tbc_6 [file exists $tbc6]
+::tcltest::testConstraint have_tbc_1pre [file exists $tbc1pre]
+::tcltest::testConstraint have_tbc_1def [file exists $tbc1_default]
+
+# Helper to capture output produced by 'puts' while sourcing/execing .tbc
+proc with_captured_puts {body} {
+    if {[namespace which -command ::tcl::puts] eq ""} {
+        rename ::puts ::tcl::puts
+    }
+    proc ::puts {args} {
+        upvar 1 __OUT __OUT
+        lappend __OUT [join $args " "]
+        return ""
+    }
+    set __OUT {}
+    set code [catch {uplevel 1 $body} err opts]
+    # restore original puts
+    rename ::puts {}
+    rename ::tcl::puts ::puts
+    if {$code} {
+        return -options $opts $err
+    }
+    return $__OUT
+}
+
+test tbcload-1.1 {load and run tc1.tbc} -constraints have_tbc_1 -body {
+    source $tbc1
+} -result {1}
+
+test tbcload-1.2 {load and run tc2.tbc} -constraints have_tbc_2 -body {
+    source $tbc2
+} -result {1}
+
+test tbcload-1.3 {load tc3.tbc then call proc} -constraints have_tbc_3 -body {
+    source $tbc3
+    mytest {1 2 3}
+} -result {123}
+
+test tbcload-1.4 {load tc4.tbc then call proc} -constraints have_tbc_4 -body {
+    set r1 [source $tbc4; mytest 1]
+    set r2 [mytest 5]
+    list {*}$r1 {*}$r2
+} -result {1 5}
+
+test tbcload-1.5 {default-named output loads and runs} -constraints have_tbc_1def -body {
+    source $tbc1_default
+} -result {1}
+
+test tbcload-1.6 {preamble executed when loading tc1pre.tbc} -constraints have_tbc_1pre -body {
+    unset -nocomplain ::_p
+    with_captured_puts { source $tbc1pre }
+    expr {[info exists ::_p] && $_p == 1}
+} -result 1
+
+test tbcload-1.7 {namespace proc from tc6 works} -constraints have_tbc_6 -body {
+    source $tbc6
+    demo::getx
+} -result {42}
+
+test tbcload-1.8 {error from loaded proc surfaces} -constraints have_tbc_5 -body {
+    source $tbc5
+    catch {boom} msg
+    return $msg
+} -result {boom}
+
+::tcltest::cleanupTests
+
+return
