@@ -20,36 +20,39 @@
 /*
  * This structure contains signature information from a compiled file.
  */
-typedef struct ImageSignature {
-  Tcl_Size formatNumber;       /* version number of the .tbc file format */
-  Tcl_Size cmpMajorVersion;    /* major version of the compiler package that generated the compiled image */
-  Tcl_Size cmpMinorVersion;    /* minor version of the compiler package that generated the compiled image */
-  Tcl_Size tclMajorVersion;    /* major version of the interpreter that generated the compiled image */
-  Tcl_Size tclMinorVersion;    /* minor version of the interpreter that generated the compiled image */
+typedef struct ImageSignature
+{
+    Tcl_Size formatNumber;    /* version number of the .tbc file format */
+    Tcl_Size cmpMajorVersion; /* major version of the compiler package that generated the compiled image */
+    Tcl_Size cmpMinorVersion; /* minor version of the compiler package that generated the compiled image */
+    Tcl_Size tclMajorVersion; /* major version of the interpreter that generated the compiled image */
+    Tcl_Size tclMinorVersion; /* minor version of the interpreter that generated the compiled image */
 } ImageSignature;
 
 /*
  * The extraction environment contains the state of an extraction for a compiled
  * ByteCode structure.
  */
-typedef struct ExtractionEnv {
-  char *imageBase;    /* base of the compiled image bytes */
-  char *imageEnd;     /* address immediately following the last byte in the compiled image */
-  char *curImagePtr;  /* pointer to the part of the compiled image we are parsing */
-  ByteCode *codePtr;  /* the ByteCode structure we are populating */
-  Tcl_Size codeSize;  /* the size of the Bytecode structure */
-  LocMapSizes locMap; /* this structure holds the sizes of the location map arrays as extracted from the image header */
-  ImageSignature sig; /* Image signature from file */
+typedef struct ExtractionEnv
+{
+    char* imageBase;    /* base of the compiled image bytes */
+    char* imageEnd;     /* address immediately following the last byte in the compiled image */
+    char* curImagePtr;  /* pointer to the part of the compiled image we are parsing */
+    ByteCode* codePtr;  /* the ByteCode structure we are populating */
+    Tcl_Size codeSize;  /* the size of the Bytecode structure */
+    LocMapSizes locMap; /* this structure holds the sizes of the location map arrays as extracted from the image header */
+    ImageSignature sig; /* Image signature from file */
 } ExtractionEnv;
 
 /*
  * This struct holds the decoding context for a run of ExtractByteSequence
  */
-typedef struct A85DecodeContext {
-  Tcl_Size bytesToDecode; /* number of bytes left to decode */
-  unsigned char *curPtr;  /* pointer to the next available location in the decode buffer */
-  int curChar;            /* index of the next base-85 digit to be stored in the decode buffer */
-  int decodeBuf[5];       /* buffer to hold the 5-tuple we are currently collecting. */
+typedef struct A85DecodeContext
+{
+    Tcl_Size bytesToDecode; /* number of bytes left to decode */
+    unsigned char* curPtr;  /* pointer to the next available location in the decode buffer */
+    int curChar;            /* index of the next base-85 digit to be stored in the decode buffer */
+    int decodeBuf[5];       /* buffer to hold the 5-tuple we are currently collecting. */
 } A85DecodeContext;
 
 /*
@@ -95,10 +98,7 @@ static char errorInfoMarker[] = CMP_ERRORINFO_MARKER;
  * This map must be kept consistent with the equivalent one in cmpWrite.c.
  */
 static ExcRangeMap excRangeMap[] = {
-  { LOOP_EXCEPTION_RANGE, CMP_LOOP_EXCEPTION_RANGE },
-  { CATCH_EXCEPTION_RANGE, CMP_CATCH_EXCEPTION_RANGE },
-  { 0, '\0' }
-};
+    {LOOP_EXCEPTION_RANGE, CMP_LOOP_EXCEPTION_RANGE}, {CATCH_EXCEPTION_RANGE, CMP_CATCH_EXCEPTION_RANGE}, {0, '\0'}};
 
 /*
  * The list of VAR_ flag values to check when emitting. The order is
@@ -119,140 +119,140 @@ static int varFlagsListSize = sizeof(varFlagsList) / sizeof(varFlagsList[0]);
  * they are illegal characters in the sequence (they should not appear).
  * The decoder skips whitespace while decoding.
  */
-#define times85(x)  ((((((x<<2)+x)<<2)+x)<<2)+x)
+#define times85(x) ((((((x << 2) + x) << 2) + x) << 2) + x)
 
-#define A85_WHITESPACE    -1
-#define A85_ILLEGAL_CHAR  -2
-#define A85_Z             -3
+#define A85_WHITESPACE -1
+#define A85_ILLEGAL_CHAR -2
+#define A85_Z -3
 
 static int decodeMap[] = {
-  A85_ILLEGAL_CHAR, /* ^@ */
-  A85_ILLEGAL_CHAR, /* ^A */
-  A85_ILLEGAL_CHAR, /* ^B */
-  A85_ILLEGAL_CHAR, /* ^C */
-  A85_ILLEGAL_CHAR, /* ^D */
-  A85_ILLEGAL_CHAR, /* ^E */
-  A85_ILLEGAL_CHAR, /* ^F */
-  A85_ILLEGAL_CHAR, /* ^G */
-  A85_ILLEGAL_CHAR, /* ^H */
-  A85_WHITESPACE,   /* \t */
-  A85_WHITESPACE,   /* \n */
-  A85_ILLEGAL_CHAR, /* ^K */
-  A85_ILLEGAL_CHAR, /* ^L */
-  A85_ILLEGAL_CHAR, /* ^M */
-  A85_ILLEGAL_CHAR, /* ^N */
-  A85_ILLEGAL_CHAR, /* ^O */
-  A85_ILLEGAL_CHAR, /* ^P */
-  A85_ILLEGAL_CHAR, /* ^Q */
-  A85_ILLEGAL_CHAR, /* ^R */
-  A85_ILLEGAL_CHAR, /* ^S */
-  A85_ILLEGAL_CHAR, /* ^T */
-  A85_ILLEGAL_CHAR, /* ^U */
-  A85_ILLEGAL_CHAR, /* ^V */
-  A85_ILLEGAL_CHAR, /* ^W */
-  A85_ILLEGAL_CHAR, /* ^X */
-  A85_ILLEGAL_CHAR, /* ^Y */
-  A85_ILLEGAL_CHAR, /* ^Z */
-  A85_ILLEGAL_CHAR, /* ^[ */
-  A85_ILLEGAL_CHAR, /* ^\ */
-  A85_ILLEGAL_CHAR, /* ^] */
-  A85_ILLEGAL_CHAR, /* ^^ */
-  A85_ILLEGAL_CHAR, /* ^_ */
-  A85_WHITESPACE,   /*   */
-  0,                /* ! */
-  A85_ILLEGAL_CHAR, /* " (for hilit: ") */
-  2,                /* # */
-  A85_ILLEGAL_CHAR, /* $ */
-  4,                /* % */
-  5,                /* & */
-  6,                /* ' */
-  7,                /* ( */
-  8,                /* ) */
-  9,                /* * */
-  10,               /* + */
-  11,               /* , */
-  12,               /* - */
-  13,               /* . */
-  14,               /* / */
-  15,               /* 0 */
-  16,               /* 1 */
-  17,               /* 2 */
-  18,               /* 3 */
-  19,               /* 4 */
-  20,               /* 5 */
-  21,               /* 6 */
-  22,               /* 7 */
-  23,               /* 8 */
-  24,               /* 9 */
-  25,               /* : */
-  26,               /* ; */
-  27,               /* < */
-  28,               /* = */
-  29,               /* > */
-  30,               /* ? */
-  31,               /* @ */
-  32,               /* A */
-  33,               /* B */
-  34,               /* C */
-  35,               /* D */
-  36,               /* E */
-  37,               /* F */
-  38,               /* G */
-  39,               /* H */
-  40,               /* I */
-  41,               /* J */
-  42,               /* K */
-  43,               /* L */
-  44,               /* M */
-  45,               /* N */
-  46,               /* O */
-  47,               /* P */
-  48,               /* Q */
-  49,               /* R */
-  50,               /* S */
-  51,               /* T */
-  52,               /* U */
-  53,               /* V */
-  54,               /* W */
-  55,               /* X */
-  56,               /* Y */
-  57,               /* Z */
-  A85_ILLEGAL_CHAR, /* [ */
-  A85_ILLEGAL_CHAR, /* \ */
-  A85_ILLEGAL_CHAR, /* ] */
-  61,               /* ^ */
-  62,               /* _ */
-  63,               /* ` */
-  64,               /* a */
-  65,               /* b */
-  66,               /* c */
-  67,               /* d */
-  68,               /* e */
-  69,               /* f */
-  70,               /* g */
-  71,               /* h */
-  72,               /* i */
-  73,               /* j */
-  74,               /* k */
-  75,               /* l */
-  76,               /* m */
-  77,               /* n */
-  78,               /* o */
-  79,               /* p */
-  80,               /* q */
-  81,               /* r */
-  82,               /* s */
-  83,               /* t */
-  84,               /* u */
-  1,                /* v (replaces ") " */
-  3,                /* w (replaces $) */
-  58,               /* x (replaces [) */
-  59,               /* y (replaces \) */
-  A85_Z,            /* z */
-  A85_ILLEGAL_CHAR, /* { */
-  60,               /* | (replaces ]) */
-  A85_ILLEGAL_CHAR, /* } */
-  A85_ILLEGAL_CHAR, /* ~ */
+    A85_ILLEGAL_CHAR, /* ^@ */
+    A85_ILLEGAL_CHAR, /* ^A */
+    A85_ILLEGAL_CHAR, /* ^B */
+    A85_ILLEGAL_CHAR, /* ^C */
+    A85_ILLEGAL_CHAR, /* ^D */
+    A85_ILLEGAL_CHAR, /* ^E */
+    A85_ILLEGAL_CHAR, /* ^F */
+    A85_ILLEGAL_CHAR, /* ^G */
+    A85_ILLEGAL_CHAR, /* ^H */
+    A85_WHITESPACE,   /* \t */
+    A85_WHITESPACE,   /* \n */
+    A85_ILLEGAL_CHAR, /* ^K */
+    A85_ILLEGAL_CHAR, /* ^L */
+    A85_ILLEGAL_CHAR, /* ^M */
+    A85_ILLEGAL_CHAR, /* ^N */
+    A85_ILLEGAL_CHAR, /* ^O */
+    A85_ILLEGAL_CHAR, /* ^P */
+    A85_ILLEGAL_CHAR, /* ^Q */
+    A85_ILLEGAL_CHAR, /* ^R */
+    A85_ILLEGAL_CHAR, /* ^S */
+    A85_ILLEGAL_CHAR, /* ^T */
+    A85_ILLEGAL_CHAR, /* ^U */
+    A85_ILLEGAL_CHAR, /* ^V */
+    A85_ILLEGAL_CHAR, /* ^W */
+    A85_ILLEGAL_CHAR, /* ^X */
+    A85_ILLEGAL_CHAR, /* ^Y */
+    A85_ILLEGAL_CHAR, /* ^Z */
+    A85_ILLEGAL_CHAR, /* ^[ */
+    A85_ILLEGAL_CHAR, /* ^\ */
+    A85_ILLEGAL_CHAR, /* ^] */
+    A85_ILLEGAL_CHAR, /* ^^ */
+    A85_ILLEGAL_CHAR, /* ^_ */
+    A85_WHITESPACE,   /*   */
+    0,                /* ! */
+    A85_ILLEGAL_CHAR, /* " (for hilit: ") */
+    2,                /* # */
+    A85_ILLEGAL_CHAR, /* $ */
+    4,                /* % */
+    5,                /* & */
+    6,                /* ' */
+    7,                /* ( */
+    8,                /* ) */
+    9,                /* * */
+    10,               /* + */
+    11,               /* , */
+    12,               /* - */
+    13,               /* . */
+    14,               /* / */
+    15,               /* 0 */
+    16,               /* 1 */
+    17,               /* 2 */
+    18,               /* 3 */
+    19,               /* 4 */
+    20,               /* 5 */
+    21,               /* 6 */
+    22,               /* 7 */
+    23,               /* 8 */
+    24,               /* 9 */
+    25,               /* : */
+    26,               /* ; */
+    27,               /* < */
+    28,               /* = */
+    29,               /* > */
+    30,               /* ? */
+    31,               /* @ */
+    32,               /* A */
+    33,               /* B */
+    34,               /* C */
+    35,               /* D */
+    36,               /* E */
+    37,               /* F */
+    38,               /* G */
+    39,               /* H */
+    40,               /* I */
+    41,               /* J */
+    42,               /* K */
+    43,               /* L */
+    44,               /* M */
+    45,               /* N */
+    46,               /* O */
+    47,               /* P */
+    48,               /* Q */
+    49,               /* R */
+    50,               /* S */
+    51,               /* T */
+    52,               /* U */
+    53,               /* V */
+    54,               /* W */
+    55,               /* X */
+    56,               /* Y */
+    57,               /* Z */
+    A85_ILLEGAL_CHAR, /* [ */
+    A85_ILLEGAL_CHAR, /* \ */
+    A85_ILLEGAL_CHAR, /* ] */
+    61,               /* ^ */
+    62,               /* _ */
+    63,               /* ` */
+    64,               /* a */
+    65,               /* b */
+    66,               /* c */
+    67,               /* d */
+    68,               /* e */
+    69,               /* f */
+    70,               /* g */
+    71,               /* h */
+    72,               /* i */
+    73,               /* j */
+    74,               /* k */
+    75,               /* l */
+    76,               /* m */
+    77,               /* n */
+    78,               /* o */
+    79,               /* p */
+    80,               /* q */
+    81,               /* r */
+    82,               /* s */
+    83,               /* t */
+    84,               /* u */
+    1,                /* v (replaces ") " */
+    3,                /* w (replaces $) */
+    58,               /* x (replaces [) */
+    59,               /* y (replaces \) */
+    A85_Z,            /* z */
+    A85_ILLEGAL_CHAR, /* { */
+    60,               /* | (replaces ]) */
+    A85_ILLEGAL_CHAR, /* } */
+    A85_ILLEGAL_CHAR, /* ~ */
 };
 
 /*
@@ -261,17 +261,17 @@ static int decodeMap[] = {
  * exported by the TCL DLL, and therefore if we use the address of the
  * standard types we get an undefined symbol at link time.
  */
-static const Tcl_ObjType *cmpTclProProcBodyType = 0;
-static const Tcl_ObjType *cmpByteCodeType = 0;
-static const Tcl_ObjType *cmpDoubleType = 0;
-static const Tcl_ObjType *cmpIntType = 0;
+static const Tcl_ObjType* cmpTclProProcBodyType = 0;
+static const Tcl_ObjType* cmpByteCodeType = 0;
+static const Tcl_ObjType* cmpDoubleType = 0;
+static const Tcl_ObjType* cmpIntType = 0;
 
 /*
  * Same thing for AuxDataTypes.
  */
-static const AuxDataType *cmpJumptableInfoType = 0;
-static const AuxDataType *cmpDictUpdateInfoType = 0;
-static const AuxDataType *cmpNewForeachInfoType = 0;
+static const AuxDataType* cmpJumptableInfoType = 0;
+static const AuxDataType* cmpDictUpdateInfoType = 0;
+static const AuxDataType* cmpNewForeachInfoType = 0;
 
 static int didLoadTypes = 0;
 
@@ -290,62 +290,66 @@ static int compatibilityLayerInit = 0;
  * This procedure is used internally to look up symbols in the current
  * executable, to initialize the compatibility layer properly
  */
-extern void *TbcloadGetSymbolAddress (const char* symbolName);
+extern void* TbcloadGetSymbolAddress(const char* symbolName);
 
 /*
  * The factory for procbody objects.
  */
-typedef Tcl_Obj *(ProcBodyFactory) (Proc *procPtr);
-static ProcBodyFactory *procBodyFactory = 0;
+typedef Tcl_Obj*(ProcBodyFactory)(Proc* procPtr);
+static ProcBodyFactory* procBodyFactory = 0;
 
 /*
  * The cleanup proc for procbody objects.
  */
-typedef void (ProcBodyCleanup) (Proc *procPtr);
-static ProcBodyCleanup *procBodyCleanup = 0;
+typedef void(ProcBodyCleanup)(Proc* procPtr);
+static ProcBodyCleanup* procBodyCleanup = 0;
 
 /*
  *
  * The real tbcload::bcproc command implementation, Tcl_ProcObjCmd
  *
  */
-static Tcl_ObjCmdProc *bcprocCmdProc = NULL;
+static Tcl_ObjCmdProc* bcprocCmdProc = NULL;
 
 /*
  * Prototypes for procedures defined later in this file:
  */
-static int A85DecodeByte(Tcl_Interp *interp, int code, A85DecodeContext *ctxPtr);
-static void A85InitDecodeContext(Tcl_Size numBytes, unsigned char *decodeBuf, A85DecodeContext *ctxPtr);
-static int AllocAndExtractByteSequence(Tcl_Interp *interp, ExtractionEnv *envPtr, int addNull, unsigned char **seqPtrPtr, Tcl_Size *seqSizePtr);
-static int AllocAndExtractString(Tcl_Interp *interp, ExtractionEnv *envPtr, int addNull, char **strPtrPtr, Tcl_Size *strSizePtr);
-static void AppendErrorLocation(Tcl_Interp *interp, ExtractionEnv *envPtr);
-static int CheckSignature(Tcl_Interp *interp, ImageSignature *signaturePtr);
-static void CleanupByteCode(ExtractionEnv *envPtr);
-static void CleanupExtractEnv(ExtractionEnv *envPtr);
-static Tcl_Obj * CreateSimpleObject(ExtractionEnv *envPtr);
-static int ExcRangeFromName(Tcl_Size name, ExceptionRangeType *typePtr);
-static int ExtractAuxDataArray(Tcl_Interp *interp, Tcl_Size numAuxDataItems, ExtractionEnv *envPtr, AuxData *auxDataArray, Tcl_Size auxDataArraySize);
-static int ExtractByteCode(Tcl_Interp *interp, ExtractionEnv *envPtr);
-static int ExtractByteSequence(Tcl_Interp *interp, Tcl_Size length, ExtractionEnv *envPtr, unsigned char *seqPtr, Tcl_Size seqSize);
-static Tcl_Obj* ExtractCompiledFile(Tcl_Interp *interp, char *codePtr, Tcl_Size codeLength);
-static CompiledLocal * ExtractCompiledLocal(Tcl_Interp *interp, ExtractionEnv *envPtr);
-static int ExtractDictUpdateInfo(Tcl_Interp *interp, ExtractionEnv *envPtr, AuxData *auxDataPtr);
-static int ExtractExcRangeArray(Tcl_Interp *interp, Tcl_Size numExceptRanges, ExtractionEnv *envPtr, ExceptionRange *excArray, Tcl_Size excArraySize);
-static int ExtractTclSize(Tcl_Interp *interp, ExtractionEnv *envPtr, Tcl_Size *valuePtr);
-static int ExtractJumptableInfo(Tcl_Interp *interp, ExtractionEnv *envPtr, AuxData *auxDataPtr);
-static int ExtractNewForeachInfo(Tcl_Interp *interp, ExtractionEnv *envPtr, AuxData *auxDataPtr);
-static int ExtractObjArray(Tcl_Interp *interp, Tcl_Size numLitObjects, ExtractionEnv *envPtr, Tcl_Obj **objArray, Tcl_Size objArraySize);
-static Tcl_Obj * ExtractObject(Tcl_Interp *interp, ExtractionEnv *envPtr);
-static Tcl_Obj * ExtractProcBody(Tcl_Interp *interp, ByteCode *codePtr, ExtractionEnv *envPtr);
-static char* ExtractSignature(Tcl_Interp *interp, char *codePtr, char *codeEnd, ImageSignature *signaturePtr);
-static int ExtractString(Tcl_Interp *interp, Tcl_Size length, ExtractionEnv *envPtr, char *strPtr, Tcl_Size strSize);
-static char * FindEnd(char *first, char *last);
-static int InitByteCode(Tcl_Interp *interp, ExtractionEnv *envPtr);
-static int InitCompatibilityLayer(Tcl_Interp *interp);
-static void InitExtractEnv(char *codeBase, char *codeEnd, ExtractionEnv *envPtr);
+static int A85DecodeByte(Tcl_Interp* interp, int code, A85DecodeContext* ctxPtr);
+static void A85InitDecodeContext(Tcl_Size numBytes, unsigned char* decodeBuf, A85DecodeContext* ctxPtr);
+static int AllocAndExtractByteSequence(
+    Tcl_Interp* interp, ExtractionEnv* envPtr, int addNull, unsigned char** seqPtrPtr, Tcl_Size* seqSizePtr);
+static int AllocAndExtractString(Tcl_Interp* interp, ExtractionEnv* envPtr, int addNull, char** strPtrPtr, Tcl_Size* strSizePtr);
+static void AppendErrorLocation(Tcl_Interp* interp, ExtractionEnv* envPtr);
+static int CheckSignature(Tcl_Interp* interp, ImageSignature* signaturePtr);
+static void CleanupByteCode(ExtractionEnv* envPtr);
+static void CleanupExtractEnv(ExtractionEnv* envPtr);
+static Tcl_Obj* CreateSimpleObject(ExtractionEnv* envPtr);
+static int ExcRangeFromName(Tcl_Size name, ExceptionRangeType* typePtr);
+static int ExtractAuxDataArray(
+    Tcl_Interp* interp, Tcl_Size numAuxDataItems, ExtractionEnv* envPtr, AuxData* auxDataArray, Tcl_Size auxDataArraySize);
+static int ExtractByteCode(Tcl_Interp* interp, ExtractionEnv* envPtr);
+static int
+ExtractByteSequence(Tcl_Interp* interp, Tcl_Size length, ExtractionEnv* envPtr, unsigned char* seqPtr, Tcl_Size seqSize);
+static Tcl_Obj* ExtractCompiledFile(Tcl_Interp* interp, char* codePtr, Tcl_Size codeLength);
+static CompiledLocal* ExtractCompiledLocal(Tcl_Interp* interp, ExtractionEnv* envPtr);
+static int ExtractDictUpdateInfo(Tcl_Interp* interp, ExtractionEnv* envPtr, AuxData* auxDataPtr);
+static int ExtractExcRangeArray(
+    Tcl_Interp* interp, Tcl_Size numExceptRanges, ExtractionEnv* envPtr, ExceptionRange* excArray, Tcl_Size excArraySize);
+static int ExtractTclSize(Tcl_Interp* interp, ExtractionEnv* envPtr, Tcl_Size* valuePtr);
+static int ExtractJumptableInfo(Tcl_Interp* interp, ExtractionEnv* envPtr, AuxData* auxDataPtr);
+static int ExtractNewForeachInfo(Tcl_Interp* interp, ExtractionEnv* envPtr, AuxData* auxDataPtr);
+static int
+ExtractObjArray(Tcl_Interp* interp, Tcl_Size numLitObjects, ExtractionEnv* envPtr, Tcl_Obj** objArray, Tcl_Size objArraySize);
+static Tcl_Obj* ExtractObject(Tcl_Interp* interp, ExtractionEnv* envPtr);
+static Tcl_Obj* ExtractProcBody(Tcl_Interp* interp, ByteCode* codePtr, ExtractionEnv* envPtr);
+static char* ExtractSignature(Tcl_Interp* interp, char* codePtr, char* codeEnd, ImageSignature* signaturePtr);
+static int ExtractString(Tcl_Interp* interp, Tcl_Size length, ExtractionEnv* envPtr, char* strPtr, Tcl_Size strSize);
+static char* FindEnd(char* first, char* last);
+static int InitByteCode(Tcl_Interp* interp, ExtractionEnv* envPtr);
+static int InitCompatibilityLayer(Tcl_Interp* interp);
+static void InitExtractEnv(char* codeBase, char* codeEnd, ExtractionEnv* envPtr);
 static void InitTypes();
 
-
 /*
  *----------------------------------------------------------------------
  *
@@ -364,53 +368,56 @@ static void InitTypes();
  *----------------------------------------------------------------------
  */
 
-int
-Tbcload_EvalObjCmd(void * dummy, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
+int Tbcload_EvalObjCmd(void* dummy, Tcl_Interp* interp, Tcl_Size objc, Tcl_Obj* const objv[])
 {
-  ImageSignature sig;
-  Tcl_Obj *cmdObjPtr;
-  char *scriptPtr;
-  Tcl_Size scriptLength;
-  int result;
+    ImageSignature sig;
+    Tcl_Obj* cmdObjPtr;
+    char* scriptPtr;
+    Tcl_Size scriptLength;
+    int result;
 
-  if (objc < 2) {
-    Tcl_WrongNumArgs(interp, 1, objv, "bytestream");
-    return TCL_ERROR;
-  }
+    if (objc < 2)
+    {
+        Tcl_WrongNumArgs(interp, 1, objv, "bytestream");
+        return TCL_ERROR;
+    }
 
-  /*
-   * Check the signature. If OK, then extract the whole file.
-   * If the script is empty, return TCL_OK here.
-   */
+    /*
+     * Check the signature. If OK, then extract the whole file.
+     * If the script is empty, return TCL_OK here.
+     */
+    scriptPtr = Tcl_GetStringFromObj(objv[1], &scriptLength);
 
-  scriptPtr = objv[1]->bytes;
-  scriptLength = objv[1]->length;
+    if ((scriptLength < 1) || (scriptPtr == NULL))
+    {
+        return TCL_OK;
+    }
 
-  if ((scriptLength < 1) || (scriptPtr == NULL)) {
-    return TCL_OK;
-  }
+    if ((ExtractSignature(interp, (char*)scriptPtr, (char*)(scriptPtr + scriptLength), &sig) == NULL) ||
+        (CheckSignature(interp, &sig) != TCL_OK))
+    {
+        return TCL_ERROR;
+    }
 
-  if ((ExtractSignature(interp, scriptPtr, (scriptPtr + scriptLength), &sig) == NULL) || (CheckSignature(interp, &sig) != TCL_OK)) {
-    return TCL_ERROR;
-  }
-
-  cmdObjPtr = ExtractCompiledFile(interp, scriptPtr, scriptLength);
-  if (cmdObjPtr == NULL) {
-    return TCL_ERROR;
-  }
-  result = Tcl_EvalObjEx(interp, cmdObjPtr, 0);
-  Tcl_DecrRefCount(cmdObjPtr);
+    cmdObjPtr = ExtractCompiledFile(interp, scriptPtr, scriptLength);
+    if (cmdObjPtr == NULL)
+    {
+        return TCL_ERROR;
+    }
+    result = Tcl_EvalObjEx(interp, cmdObjPtr, 0);
+    Tcl_DecrRefCount(cmdObjPtr);
 
 #if USE_CATCH_WRAPPER
-  if (result == TCL_ERROR) {
-    Tcl_AppendObjToErrorInfo(interp, Tcl_NewStringObj("\n", -1));
-    Tcl_AppendObjToErrorInfo(interp, Tcl_NewStringObj(errorInfoMarker, -1));
-  }
+    if (result == TCL_ERROR)
+    {
+        Tcl_AppendObjToErrorInfo(interp, Tcl_NewStringObj("\n", -1));
+        Tcl_AppendObjToErrorInfo(interp, Tcl_NewStringObj(errorInfoMarker, -1));
+    }
 #endif
 
-  return result;
+    return result;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -427,12 +434,11 @@ Tbcload_EvalObjCmd(void * dummy, Tcl_Interp *interp, int objc, Tcl_Obj *const ob
  *----------------------------------------------------------------------
  */
 
-int
-Tbcload_ProcObjCmd(void * dummy, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
+int Tbcload_ProcObjCmd(void* dummy, Tcl_Interp* interp, Tcl_Size objc, Tcl_Obj* const objv[])
 {
-  return (*bcprocCmdProc)(dummy, interp, objc, objv);
+    return (*bcprocCmdProc)(dummy, interp, objc, objv);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -452,61 +458,72 @@ Tbcload_ProcObjCmd(void * dummy, Tcl_Interp *interp, int objc, Tcl_Obj *const ob
  *----------------------------------------------------------------------
  */
 
-static int
-ExtractByteCode(Tcl_Interp *interp, ExtractionEnv *envPtr)
+static int ExtractByteCode(Tcl_Interp* interp, ExtractionEnv* envPtr)
 {
-  ByteCode *codePtr;
-  LocMapSizes *locMapPtr = &envPtr->locMap;
+    ByteCode* codePtr;
+    LocMapSizes* locMapPtr = &envPtr->locMap;
 
-  if (InitByteCode(interp, envPtr) != TCL_OK) {
-    goto error;
-  }
+    if (InitByteCode(interp, envPtr) != TCL_OK)
+    {
+        goto error;
+    }
 
-  codePtr = envPtr->codePtr;
+    codePtr = envPtr->codePtr;
 
-  if ((ExtractByteSequence(interp, codePtr->numCodeBytes, envPtr, codePtr->codeStart, codePtr->numCodeBytes) != TCL_OK)
-      || (ExtractByteSequence(interp, locMapPtr->codeDeltaSize, envPtr, codePtr->codeDeltaStart, locMapPtr->codeDeltaSize) != TCL_OK)
-      || (ExtractByteSequence(interp, locMapPtr->codeLengthSize, envPtr, codePtr->codeLengthStart, locMapPtr->codeLengthSize) != TCL_OK)) {
-    goto error;
-  }
+    if ((ExtractByteSequence(interp, codePtr->numCodeBytes, envPtr, codePtr->codeStart, codePtr->numCodeBytes) != TCL_OK) ||
+        (ExtractByteSequence(interp, locMapPtr->codeDeltaSize, envPtr, codePtr->codeDeltaStart, locMapPtr->codeDeltaSize) !=
+         TCL_OK) ||
+        (ExtractByteSequence(interp, locMapPtr->codeLengthSize, envPtr, codePtr->codeLengthStart, locMapPtr->codeLengthSize) !=
+         TCL_OK))
+    {
+        goto error;
+    }
 
-  if ((locMapPtr->srcDeltaSize >= 0)
-      && (ExtractByteSequence(interp, locMapPtr->srcDeltaSize, envPtr, codePtr->srcDeltaStart, locMapPtr->srcDeltaSize) != TCL_OK)) {
-    goto error;
-  }
+    if ((locMapPtr->srcDeltaSize >= 0) &&
+        (ExtractByteSequence(interp, locMapPtr->srcDeltaSize, envPtr, codePtr->srcDeltaStart, locMapPtr->srcDeltaSize) != TCL_OK))
+    {
+        goto error;
+    }
 
-  if ((locMapPtr->srcLengthSize >= 0)
-      && (ExtractByteSequence(interp, locMapPtr->srcLengthSize, envPtr, codePtr->srcLengthStart, locMapPtr->srcLengthSize) != TCL_OK)) {
-    goto error;
-  }
+    if ((locMapPtr->srcLengthSize >= 0) &&
+        (ExtractByteSequence(interp, locMapPtr->srcLengthSize, envPtr, codePtr->srcLengthStart, locMapPtr->srcLengthSize) !=
+         TCL_OK))
+    {
+        goto error;
+    }
 
-  if ((ExtractObjArray(interp, codePtr->numLitObjects, envPtr, codePtr->objArrayPtr, codePtr->numLitObjects) != TCL_OK)
-      || (ExtractExcRangeArray(interp, codePtr->numExceptRanges, envPtr, codePtr->exceptArrayPtr, codePtr->numExceptRanges) != TCL_OK)
-      || (ExtractAuxDataArray(interp, codePtr->numAuxDataItems, envPtr, codePtr->auxDataArrayPtr, codePtr->numAuxDataItems) != TCL_OK)) {
-    goto error;
-  }
+    if ((ExtractObjArray(interp, codePtr->numLitObjects, envPtr, codePtr->objArrayPtr, codePtr->numLitObjects) != TCL_OK) ||
+        (ExtractExcRangeArray(interp, codePtr->numExceptRanges, envPtr, codePtr->exceptArrayPtr, codePtr->numExceptRanges) !=
+         TCL_OK) ||
+        (ExtractAuxDataArray(interp, codePtr->numAuxDataItems, envPtr, codePtr->auxDataArrayPtr, codePtr->numAuxDataItems) !=
+         TCL_OK))
+    {
+        goto error;
+    }
 
-  /*
-   * If the source map arrays were not included in the .tbc file (which is
-   * typically the case), generate them here; each command will start at 0
-   * and have length noSourceCodeSize
-   */
+    /*
+     * If the source map arrays were not included in the .tbc file (which is
+     * typically the case), generate them here; each command will start at 0
+     * and have length noSourceCodeSize
+     */
 
-  if (locMapPtr->srcDeltaSize < 0) {
-    memset(codePtr->srcDeltaStart, 0, (size_t) codePtr->numCommands);
-  }
+    if (locMapPtr->srcDeltaSize < 0)
+    {
+        memset(codePtr->srcDeltaStart, 0, (size_t)codePtr->numCommands);
+    }
 
-  if (locMapPtr->srcLengthSize < 0) {
-    memset(codePtr->srcLengthStart, (char) noSourceCodeSize, (size_t) codePtr->numCommands);
-  }
+    if (locMapPtr->srcLengthSize < 0)
+    {
+        memset(codePtr->srcLengthStart, (char)noSourceCodeSize, (size_t)codePtr->numCommands);
+    }
 
-  return TCL_OK;
+    return TCL_OK;
 
- error:
-  CleanupByteCode(envPtr);
-  return TCL_ERROR;
+error:
+    CleanupByteCode(envPtr);
+    return TCL_ERROR;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -530,168 +547,187 @@ ExtractByteCode(Tcl_Interp *interp, ExtractionEnv *envPtr)
  *----------------------------------------------------------------------
  */
 
-static int
-InitByteCode(Tcl_Interp *interp, ExtractionEnv *envPtr)
+static int InitByteCode(Tcl_Interp* interp, ExtractionEnv* envPtr)
 {
-  Interp *iPtr = (Interp *) interp;
-  ByteCode *byteCodePtr;
-  unsigned char *p;
-  Tcl_Size size;
-  Tcl_Size numCommands, numSrcBytes, numCodeBytes, numLitObjects, numExceptRanges;
-  Tcl_Size numAuxDataItems, numCmdLocBytes, maxExceptDepth, maxStackDepth;
-  Tcl_Size objArrayBytes, exceptArrayBytes, auxDataArrayBytes;
-  LocMapSizes *locMapPtr = &envPtr->locMap;
-  Namespace *namespacePtr;
+    Interp* iPtr = (Interp*)interp;
+    ByteCode* byteCodePtr;
+    unsigned char* p;
+    Tcl_Size size;
+    Tcl_Size numCommands, numSrcBytes, numCodeBytes, numLitObjects, numExceptRanges;
+    Tcl_Size numAuxDataItems, numCmdLocBytes, maxExceptDepth, maxStackDepth;
+    Tcl_Size objArrayBytes, exceptArrayBytes, auxDataArrayBytes;
+    LocMapSizes* locMapPtr = &envPtr->locMap;
+    Namespace* namespacePtr;
 
-  CleanupByteCode(envPtr);
+    CleanupByteCode(envPtr);
 
-  /*
-   * Determine the size of the ByteCode struct, malloc it, then initialize
-   * the components that were not saved with the file image because it
-   * doesn't make sense to do so: pointer to the interpreter, epoch, etc...
-   * To determine the size of the ByteCode struct, we read in the .tbc
-   * control line, which has enough enformation to calculate the required
-   * size.
-   */
-
-  if ((ExtractTclSize(interp, envPtr, &numCommands) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &numSrcBytes) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &numCodeBytes) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &numLitObjects) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &numExceptRanges) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &numAuxDataItems) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &numCmdLocBytes) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &maxExceptDepth) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &maxStackDepth) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &(locMapPtr->codeDeltaSize)) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &(locMapPtr->codeLengthSize)) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &(locMapPtr->srcDeltaSize)) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &(locMapPtr->srcLengthSize)) != TCL_OK)) {
-    return TCL_ERROR;
-  }
-
-  objArrayBytes = (numLitObjects * sizeof(Tcl_Obj *));
-  exceptArrayBytes = (numExceptRanges * sizeof(ExceptionRange));
-  auxDataArrayBytes = (numAuxDataItems * sizeof(AuxData));
-
-  /*
-   * generate the numCmdLocBytes from the values of the location and
-   * source arrays, which could be different here from the original,
-   * because the .tbc file was written without sources
-   */
-
-  numCmdLocBytes = locMapPtr->codeDeltaSize + locMapPtr->codeLengthSize;
-
-  if (locMapPtr->srcDeltaSize < 0) {
     /*
-     * The source arrays have as many entries as the number of commands,
-     * because both start (0 for all) and delta (noSourceCodeSize for all)
-     * values fit in one byte
+     * Determine the size of the ByteCode struct, malloc it, then initialize
+     * the components that were not saved with the file image because it
+     * doesn't make sense to do so: pointer to the interpreter, epoch, etc...
+     * To determine the size of the ByteCode struct, we read in the .tbc
+     * control line, which has enough enformation to calculate the required
+     * size.
      */
-    numCmdLocBytes += numCommands;
-  } else {
-    numCmdLocBytes += locMapPtr->srcDeltaSize;
-  }
-  if (locMapPtr->srcLengthSize < 0) {
-    numCmdLocBytes += numCommands;
-  } else {
-    numCmdLocBytes += locMapPtr->srcLengthSize;
-  }
 
-  size = sizeof(ByteCode);
-  size += TCL_ALIGN(numCodeBytes);      /* align object array */
-  size += TCL_ALIGN(objArrayBytes);     /* align exception range array */
-  size += TCL_ALIGN(exceptArrayBytes);  /* align AuxData array */
-  size += auxDataArrayBytes;
-  size += numCmdLocBytes;
+    if ((ExtractTclSize(interp, envPtr, &numCommands) != TCL_OK) || (ExtractTclSize(interp, envPtr, &numSrcBytes) != TCL_OK) ||
+        (ExtractTclSize(interp, envPtr, &numCodeBytes) != TCL_OK) || (ExtractTclSize(interp, envPtr, &numLitObjects) != TCL_OK) ||
+        (ExtractTclSize(interp, envPtr, &numExceptRanges) != TCL_OK) ||
+        (ExtractTclSize(interp, envPtr, &numAuxDataItems) != TCL_OK) ||
+        (ExtractTclSize(interp, envPtr, &numCmdLocBytes) != TCL_OK) ||
+        (ExtractTclSize(interp, envPtr, &maxExceptDepth) != TCL_OK) ||
+        (ExtractTclSize(interp, envPtr, &maxStackDepth) != TCL_OK) ||
+        (ExtractTclSize(interp, envPtr, &(locMapPtr->codeDeltaSize)) != TCL_OK) ||
+        (ExtractTclSize(interp, envPtr, &(locMapPtr->codeLengthSize)) != TCL_OK) ||
+        (ExtractTclSize(interp, envPtr, &(locMapPtr->srcDeltaSize)) != TCL_OK) ||
+        (ExtractTclSize(interp, envPtr, &(locMapPtr->srcLengthSize)) != TCL_OK))
+    {
+        return TCL_ERROR;
+    }
 
-  /*
-   * initialize the reference count on the ByteCode to 1 because we have a
-   * reference to it in the extraction environment struct.
-   */
+    objArrayBytes = (numLitObjects * sizeof(Tcl_Obj*));
+    exceptArrayBytes = (numExceptRanges * sizeof(ExceptionRange));
+    auxDataArrayBytes = (numAuxDataItems * sizeof(AuxData));
 
-  if (iPtr->varFramePtr != NULL) {
-    namespacePtr = iPtr->varFramePtr->nsPtr;
-  } else {
-    namespacePtr = iPtr->globalNsPtr;
-  }
+    /*
+     * generate the numCmdLocBytes from the values of the location and
+     * source arrays, which could be different here from the original,
+     * because the .tbc file was written without sources
+     */
 
-  p = (unsigned char *) Tcl_Alloc((size_t) size);
-  byteCodePtr = (ByteCode *) p;
-  memset(byteCodePtr, 0, (size_t) size);
-  byteCodePtr->interpHandle = TclHandlePreserve(iPtr->handle);
-  byteCodePtr->compileEpoch = iPtr->compileEpoch;
-  byteCodePtr->nsPtr = namespacePtr;
-  byteCodePtr->nsEpoch = namespacePtr->resolverEpoch;
-  byteCodePtr->refCount = 1;
-  byteCodePtr->flags = TCL_BYTECODE_PRECOMPILED;
-  byteCodePtr->procPtr = NULL;
+    numCmdLocBytes = locMapPtr->codeDeltaSize + locMapPtr->codeLengthSize;
 
-  envPtr->codeSize = size;
-  envPtr->codePtr = byteCodePtr;
+    if (locMapPtr->srcDeltaSize < 0)
+    {
+        /*
+         * The source arrays have as many entries as the number of commands,
+         * because both start (0 for all) and delta (noSourceCodeSize for all)
+         * values fit in one byte
+         */
+        numCmdLocBytes += numCommands;
+    }
+    else
+    {
+        numCmdLocBytes += locMapPtr->srcDeltaSize;
+    }
+    if (locMapPtr->srcLengthSize < 0)
+    {
+        numCmdLocBytes += numCommands;
+    }
+    else
+    {
+        numCmdLocBytes += locMapPtr->srcLengthSize;
+    }
 
-  byteCodePtr->structureSize = 0;
-  byteCodePtr->numCommands = numCommands;
-  byteCodePtr->numSrcBytes = numSrcBytes;
-  byteCodePtr->numCodeBytes = numCodeBytes;
-  byteCodePtr->numLitObjects = numLitObjects;
-  byteCodePtr->numExceptRanges = numExceptRanges;
-  byteCodePtr->numAuxDataItems = numAuxDataItems;
-  byteCodePtr->numCmdLocBytes = numCmdLocBytes;
-  byteCodePtr->maxExceptDepth = maxExceptDepth;
-  byteCodePtr->maxStackDepth = maxStackDepth;
-  byteCodePtr->source = noSourceCode;
-  byteCodePtr->numSrcBytes = noSourceCodeSize;
+    size = sizeof(ByteCode);
+    size += TCL_ALIGN(numCodeBytes);     /* align object array */
+    size += TCL_ALIGN(objArrayBytes);    /* align exception range array */
+    size += TCL_ALIGN(exceptArrayBytes); /* align AuxData array */
+    size += auxDataArrayBytes;
+    size += numCmdLocBytes;
 
-  /*
-   * The assignements to p must be kept consistent with the ones in
-   * TclInitByteCodeObj, so that the arrays are aligned as expected.
-   */
+    /*
+     * initialize the reference count on the ByteCode to 1 because we have a
+     * reference to it in the extraction environment struct.
+     */
 
-  p += sizeof(ByteCode);
-  byteCodePtr->codeStart = p;
-  memset(p, 0, (size_t) numCodeBytes);
+    if (iPtr->varFramePtr != NULL)
+    {
+        namespacePtr = iPtr->varFramePtr->nsPtr;
+    }
+    else
+    {
+        namespacePtr = iPtr->globalNsPtr;
+    }
 
-  p += TCL_ALIGN(numCodeBytes);
-  if (numLitObjects > 0) {
-    byteCodePtr->objArrayPtr = (Tcl_Obj **) p;
-    memset(p, 0, (size_t) objArrayBytes);
-  } else {
-    byteCodePtr->objArrayPtr = (Tcl_Obj **) 0;
-  }
+    p = (unsigned char*)Tcl_Alloc((size_t)size);
+    byteCodePtr = (ByteCode*)p;
+    memset(byteCodePtr, 0, (size_t)size);
+    byteCodePtr->interpHandle = TclHandlePreserve(iPtr->handle);
+    byteCodePtr->compileEpoch = iPtr->compileEpoch;
+    byteCodePtr->nsPtr = namespacePtr;
+    byteCodePtr->nsEpoch = namespacePtr->resolverEpoch;
+    byteCodePtr->refCount = 1;
+    byteCodePtr->flags = TCL_BYTECODE_PRECOMPILED;
+    byteCodePtr->procPtr = NULL;
 
-  p += TCL_ALIGN(objArrayBytes);
-  if (numExceptRanges > 0) {
-    byteCodePtr->exceptArrayPtr = (ExceptionRange *) p;
-    memset(p, 0, (size_t) exceptArrayBytes);
-  } else {
-    byteCodePtr->exceptArrayPtr = (ExceptionRange *) 0;
-  }
+    envPtr->codeSize = size;
+    envPtr->codePtr = byteCodePtr;
 
-  p += TCL_ALIGN(exceptArrayBytes);
-  if (numAuxDataItems > 0) {
-    byteCodePtr->auxDataArrayPtr = (AuxData *) p;
-    memset(p, 0, (size_t) auxDataArrayBytes);
-  } else {
-    byteCodePtr->auxDataArrayPtr = (AuxData *) 0;
-  }
+    byteCodePtr->structureSize = 0;
+    byteCodePtr->numCommands = numCommands;
+    byteCodePtr->numSrcBytes = numSrcBytes;
+    byteCodePtr->numCodeBytes = numCodeBytes;
+    byteCodePtr->numLitObjects = numLitObjects;
+    byteCodePtr->numExceptRanges = numExceptRanges;
+    byteCodePtr->numAuxDataItems = numAuxDataItems;
+    byteCodePtr->numCmdLocBytes = numCmdLocBytes;
+    byteCodePtr->maxExceptDepth = maxExceptDepth;
+    byteCodePtr->maxStackDepth = maxStackDepth;
+    byteCodePtr->source = noSourceCode;
+    byteCodePtr->numSrcBytes = noSourceCodeSize;
 
-  p += auxDataArrayBytes;
-  byteCodePtr->codeDeltaStart = p;
-  p += locMapPtr->codeDeltaSize;
-  byteCodePtr->codeLengthStart = p;
-  p += locMapPtr->codeLengthSize;
-  byteCodePtr->srcDeltaStart = p;
-  if (locMapPtr->srcDeltaSize < 0) {
-    p += byteCodePtr->numCommands;
-  } else {
-    p += locMapPtr->srcDeltaSize;
-  }
-  byteCodePtr->srcLengthStart = p;
+    /*
+     * The assignements to p must be kept consistent with the ones in
+     * TclInitByteCodeObj, so that the arrays are aligned as expected.
+     */
 
-  return TCL_OK;
+    p += sizeof(ByteCode);
+    byteCodePtr->codeStart = p;
+    memset(p, 0, (size_t)numCodeBytes);
+
+    p += TCL_ALIGN(numCodeBytes);
+    if (numLitObjects > 0)
+    {
+        byteCodePtr->objArrayPtr = (Tcl_Obj**)p;
+        memset(p, 0, (size_t)objArrayBytes);
+    }
+    else
+    {
+        byteCodePtr->objArrayPtr = (Tcl_Obj**)0;
+    }
+
+    p += TCL_ALIGN(objArrayBytes);
+    if (numExceptRanges > 0)
+    {
+        byteCodePtr->exceptArrayPtr = (ExceptionRange*)p;
+        memset(p, 0, (size_t)exceptArrayBytes);
+    }
+    else
+    {
+        byteCodePtr->exceptArrayPtr = (ExceptionRange*)0;
+    }
+
+    p += TCL_ALIGN(exceptArrayBytes);
+    if (numAuxDataItems > 0)
+    {
+        byteCodePtr->auxDataArrayPtr = (AuxData*)p;
+        memset(p, 0, (size_t)auxDataArrayBytes);
+    }
+    else
+    {
+        byteCodePtr->auxDataArrayPtr = (AuxData*)0;
+    }
+
+    p += auxDataArrayBytes;
+    byteCodePtr->codeDeltaStart = p;
+    p += locMapPtr->codeDeltaSize;
+    byteCodePtr->codeLengthStart = p;
+    p += locMapPtr->codeLengthSize;
+    byteCodePtr->srcDeltaStart = p;
+    if (locMapPtr->srcDeltaSize < 0)
+    {
+        p += byteCodePtr->numCommands;
+    }
+    else
+    {
+        p += locMapPtr->srcDeltaSize;
+    }
+    byteCodePtr->srcLengthStart = p;
+
+    return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -713,33 +749,37 @@ InitByteCode(Tcl_Interp *interp, ExtractionEnv *envPtr)
  *----------------------------------------------------------------------
  */
 
-static void
-CleanupByteCode(ExtractionEnv *envPtr)
+static void CleanupByteCode(ExtractionEnv* envPtr)
 {
-  ByteCode *byteCodePtr = envPtr->codePtr;
+    ByteCode* byteCodePtr = envPtr->codePtr;
 
-  if (byteCodePtr) {
-    byteCodePtr->refCount--;
-    if (byteCodePtr->refCount < 1) {
-      if (byteCodePtr->numLitObjects > 0) {
-        Tcl_Obj **objArrayPtr = byteCodePtr->objArrayPtr;
-        Tcl_Obj *objPtr;
-        Tcl_Size i;
+    if (byteCodePtr)
+    {
+        byteCodePtr->refCount--;
+        if (byteCodePtr->refCount < 1)
+        {
+            if (byteCodePtr->numLitObjects > 0)
+            {
+                Tcl_Obj** objArrayPtr = byteCodePtr->objArrayPtr;
+                Tcl_Obj* objPtr;
+                Tcl_Size i;
 
-        for (i = 0; i < byteCodePtr->numLitObjects; i++) {
-          objPtr = *objArrayPtr;
-          objArrayPtr += 1;
-          if (objPtr) {
-            Tcl_DecrRefCount(objPtr);
-          }
+                for (i = 0; i < byteCodePtr->numLitObjects; i++)
+                {
+                    objPtr = *objArrayPtr;
+                    objArrayPtr += 1;
+                    if (objPtr)
+                    {
+                        Tcl_DecrRefCount(objPtr);
+                    }
+                }
+            }
+            Tcl_Free((char*)byteCodePtr);
         }
-      }
-      Tcl_Free((char *) byteCodePtr);
+        envPtr->codePtr = NULL;
     }
-    envPtr->codePtr = NULL;
-  }
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -761,35 +801,36 @@ CleanupByteCode(ExtractionEnv *envPtr)
  *----------------------------------------------------------------------
  */
 
-static int
-ExtractTclSize(Tcl_Interp *interp, ExtractionEnv *envPtr, Tcl_Size *valuePtr)
+static int ExtractTclSize(Tcl_Interp* interp, ExtractionEnv* envPtr, Tcl_Size* valuePtr)
 {
-  const char *codePtr = envPtr->curImagePtr;
-  const char *codeEnd = envPtr->imageEnd;
+    const char* codePtr = envPtr->curImagePtr;
+    const char* codeEnd = envPtr->imageEnd;
 
-  /* Skip leading whitespace */
-  while (codePtr < codeEnd && isspace(UCHAR(*codePtr))) codePtr++;
-  if (codePtr >= codeEnd) {
-    Tcl_SetObjResult(interp, Tcl_NewStringObj(prematureEnd, -1));
-    return TCL_ERROR;
-  }
+    /* Skip leading whitespace */
+    while (codePtr < codeEnd && isspace(UCHAR(*codePtr)))
+        codePtr++;
+    if (codePtr >= codeEnd)
+    {
+        Tcl_SetObjResult(interp, Tcl_NewStringObj(prematureEnd, -1));
+        return TCL_ERROR;
+    }
 
-  /* Find token end without mutating the buffer */
-  const char *endPtr = FindEnd((char *)codePtr, (char *)codeEnd);
+    /* Find token end without mutating the buffer */
+    const char* endPtr = FindEnd((char*)codePtr, (char*)codeEnd);
 
-  /* Slice token into a Tcl_Obj and parse as Tcl_Size */
-  Tcl_Obj *tok = Tcl_NewStringObj(codePtr, (Tcl_Size)(endPtr - codePtr));
-  if (Tcl_GetSizeIntFromObj(interp, tok, valuePtr) != TCL_OK) {
-    AppendErrorLocation(interp, envPtr);
-    return TCL_ERROR;
-  }
+    /* Slice token into a Tcl_Obj and parse as Tcl_Size */
+    Tcl_Obj* tok = Tcl_NewStringObj(codePtr, (Tcl_Size)(endPtr - codePtr));
+    if (Tcl_GetSizeIntFromObj(interp, tok, valuePtr) != TCL_OK)
+    {
+        AppendErrorLocation(interp, envPtr);
+        return TCL_ERROR;
+    }
 
-  /* Advance scanner */
-  envPtr->curImagePtr = (char *)endPtr;
-  return TCL_OK;
+    /* Advance scanner */
+    envPtr->curImagePtr = (char*)endPtr;
+    return TCL_OK;
 }
 
-
 /*
  *----------------------------------------------------------------------
  *
@@ -818,84 +859,95 @@ ExtractTclSize(Tcl_Interp *interp, ExtractionEnv *envPtr, Tcl_Size *valuePtr)
  */
 
 static int
-ExtractByteSequence(Tcl_Interp *interp, Tcl_Size length, ExtractionEnv *envPtr, unsigned char *seqPtr, Tcl_Size seqSize)
+ExtractByteSequence(Tcl_Interp* interp, Tcl_Size length, ExtractionEnv* envPtr, unsigned char* seqPtr, Tcl_Size seqSize)
 {
-  char *imagePtr;
-  char *imageEnd;
-  Tcl_Size hLen;
-  int code;
-  A85DecodeContext decodeCtx;
-  A85DecodeContext *ctxPtr = &decodeCtx;
+    char* imagePtr;
+    char* imageEnd;
+    Tcl_Size hLen;
+    int code;
+    A85DecodeContext decodeCtx;
+    A85DecodeContext* ctxPtr = &decodeCtx;
 
-  /*
-   * read the length from the header; we need to do this even in cases where
-   * the length is passed in.
-   * Then do the length checks if necessary.
-   */
+    /*
+     * read the length from the header; we need to do this even in cases where
+     * the length is passed in.
+     * Then do the length checks if necessary.
+     */
 
-  if (ExtractTclSize(interp, envPtr, &hLen) != TCL_OK) {
-    return TCL_ERROR;
-  }
-
-  if (length < 0) {
-    length = hLen;
-  } else if (length != hLen) {
+    if (ExtractTclSize(interp, envPtr, &hLen) != TCL_OK)
     {
-      Tcl_Obj *res = Tcl_GetObjResult(interp);
-      Tcl_AppendToObj(res, "inconsistent byte sequence length", -1);
+        return TCL_ERROR;
     }
-    AppendErrorLocation(interp, envPtr);
-    return TCL_ERROR;
-  }
 
-  if (length > seqSize) {
+    if (length < 0)
     {
-      Tcl_Obj *res = Tcl_GetObjResult(interp);
-      Tcl_AppendToObj(res, "byte sequence too big for storage", -1);
+        length = hLen;
     }
-    AppendErrorLocation(interp, envPtr);
-    return TCL_ERROR;
-  }
-
-  imagePtr = envPtr->curImagePtr;
-  imageEnd = envPtr->imageEnd;
-  A85InitDecodeContext(length, seqPtr, ctxPtr);
-
-  while (decodeCtx.bytesToDecode > 0) {
-    if (imagePtr == imageEnd) {
-      envPtr->curImagePtr = imagePtr;
-      {
-        Tcl_Obj *res = Tcl_GetObjResult(interp);
-        Tcl_AppendToObj(res, prematureEnd, -1);
-      }
-      return TCL_ERROR;
-    }
-
-    code = decodeMap[(int) *imagePtr];
-    imagePtr += 1;
-
-    if (code == A85_ILLEGAL_CHAR) {
-      envPtr->curImagePtr = imagePtr - 1;
-      {
-        Tcl_Obj *res = Tcl_GetObjResult(interp);
-        Tcl_AppendToObj(res, "malformed byte sequence", -1);
-      }
-      AppendErrorLocation(interp, envPtr);
-      return TCL_ERROR;
-    } else if (code != A85_WHITESPACE) {
-      if (A85DecodeByte(interp, code, ctxPtr) != TCL_OK) {
-        envPtr->curImagePtr = imagePtr - 1;
+    else if (length != hLen)
+    {
+        {
+            Tcl_Obj* res = Tcl_GetObjResult(interp);
+            Tcl_AppendToObj(res, "inconsistent byte sequence length", -1);
+        }
         AppendErrorLocation(interp, envPtr);
         return TCL_ERROR;
-      }
     }
-  }
 
-  envPtr->curImagePtr = imagePtr;
+    if (length > seqSize)
+    {
+        {
+            Tcl_Obj* res = Tcl_GetObjResult(interp);
+            Tcl_AppendToObj(res, "byte sequence too big for storage", -1);
+        }
+        AppendErrorLocation(interp, envPtr);
+        return TCL_ERROR;
+    }
 
-  return TCL_OK;
+    imagePtr = envPtr->curImagePtr;
+    imageEnd = envPtr->imageEnd;
+    A85InitDecodeContext(length, seqPtr, ctxPtr);
+
+    while (decodeCtx.bytesToDecode > 0)
+    {
+        if (imagePtr == imageEnd)
+        {
+            envPtr->curImagePtr = imagePtr;
+            {
+                Tcl_Obj* res = Tcl_GetObjResult(interp);
+                Tcl_AppendToObj(res, prematureEnd, -1);
+            }
+            return TCL_ERROR;
+        }
+
+        code = decodeMap[(int)*imagePtr];
+        imagePtr += 1;
+
+        if (code == A85_ILLEGAL_CHAR)
+        {
+            envPtr->curImagePtr = imagePtr - 1;
+            {
+                Tcl_Obj* res = Tcl_GetObjResult(interp);
+                Tcl_AppendToObj(res, "malformed byte sequence", -1);
+            }
+            AppendErrorLocation(interp, envPtr);
+            return TCL_ERROR;
+        }
+        else if (code != A85_WHITESPACE)
+        {
+            if (A85DecodeByte(interp, code, ctxPtr) != TCL_OK)
+            {
+                envPtr->curImagePtr = imagePtr - 1;
+                AppendErrorLocation(interp, envPtr);
+                return TCL_ERROR;
+            }
+        }
+    }
+
+    envPtr->curImagePtr = imagePtr;
+
+    return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -917,28 +969,28 @@ ExtractByteSequence(Tcl_Interp *interp, Tcl_Size length, ExtractionEnv *envPtr, 
  *----------------------------------------------------------------------
  */
 
-static int
-ExtractString(Tcl_Interp *interp, Tcl_Size length, ExtractionEnv *envPtr, char *strPtr, Tcl_Size strSize)
+static int ExtractString(Tcl_Interp* interp, Tcl_Size length, ExtractionEnv* envPtr, char* strPtr, Tcl_Size strSize)
 {
-  char *imagePtr;
+    char* imagePtr;
 
-  imagePtr = envPtr->curImagePtr;
+    imagePtr = envPtr->curImagePtr;
 
-  if ((imagePtr + strSize) > envPtr->imageEnd) {
+    if ((imagePtr + strSize) > envPtr->imageEnd)
     {
-      Tcl_Obj *res = Tcl_GetObjResult(interp);
-      Tcl_AppendToObj(res, prematureEnd, -1);
+        {
+            Tcl_Obj* res = Tcl_GetObjResult(interp);
+            Tcl_AppendToObj(res, prematureEnd, -1);
+        }
+        return TCL_ERROR;
     }
-    return TCL_ERROR;
-  }
 
-  memcpy(strPtr, imagePtr, (size_t) strSize);
+    memcpy(strPtr, imagePtr, (size_t)strSize);
 
-  envPtr->curImagePtr += strSize;
+    envPtr->curImagePtr += strSize;
 
-  return TCL_OK;
+    return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -963,43 +1015,46 @@ ExtractString(Tcl_Interp *interp, Tcl_Size length, ExtractionEnv *envPtr, char *
  *----------------------------------------------------------------------
  */
 
-static int
-AllocAndExtractByteSequence(Tcl_Interp *interp, ExtractionEnv *envPtr, int addNull, unsigned char **seqPtrPtr, Tcl_Size *seqSizePtr)
+static int AllocAndExtractByteSequence(
+    Tcl_Interp* interp, ExtractionEnv* envPtr, int addNull, unsigned char** seqPtrPtr, Tcl_Size* seqSizePtr)
 {
-  char *curImagePtr;
-  Tcl_Size hLen, allocLen;
-  unsigned char *seqBuf;
+    char* curImagePtr;
+    Tcl_Size hLen, allocLen;
+    unsigned char* seqBuf;
 
-  /*
-   * read the length from the header; we need to do this so that we can
-   * allocate the buffer. Then, let's move the extraction environment back
-   * to where it was at the start of the call, so that we can call
-   * ExtractByteSequence.
-   */
+    /*
+     * read the length from the header; we need to do this so that we can
+     * allocate the buffer. Then, let's move the extraction environment back
+     * to where it was at the start of the call, so that we can call
+     * ExtractByteSequence.
+     */
 
-  curImagePtr = envPtr->curImagePtr;
-  if (ExtractTclSize(interp, envPtr, &hLen) != TCL_OK) {
-    return TCL_ERROR;
-  }
-  envPtr->curImagePtr = curImagePtr;
+    curImagePtr = envPtr->curImagePtr;
+    if (ExtractTclSize(interp, envPtr, &hLen) != TCL_OK)
+    {
+        return TCL_ERROR;
+    }
+    envPtr->curImagePtr = curImagePtr;
 
-  allocLen = (addNull) ? hLen + 1 : hLen;
-  seqBuf = (unsigned char *) Tcl_Alloc((size_t) allocLen);
-  if (ExtractByteSequence(interp, hLen, envPtr, seqBuf, hLen) != TCL_OK) {
-    Tcl_Free((char *) seqBuf);
-    return TCL_ERROR;
-  }
+    allocLen = (addNull) ? hLen + 1 : hLen;
+    seqBuf = (unsigned char*)Tcl_Alloc((size_t)allocLen);
+    if (ExtractByteSequence(interp, hLen, envPtr, seqBuf, hLen) != TCL_OK)
+    {
+        Tcl_Free((char*)seqBuf);
+        return TCL_ERROR;
+    }
 
-  *seqPtrPtr = seqBuf;
-  *seqSizePtr = hLen;
+    *seqPtrPtr = seqBuf;
+    *seqSizePtr = hLen;
 
-  if (addNull) {
-    seqBuf[hLen] = 0;
-  }
+    if (addNull)
+    {
+        seqBuf[hLen] = 0;
+    }
 
-  return TCL_OK;
+    return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1024,63 +1079,68 @@ AllocAndExtractByteSequence(Tcl_Interp *interp, ExtractionEnv *envPtr, int addNu
  *----------------------------------------------------------------------
  */
 
-static int
-AllocAndExtractString(Tcl_Interp *interp, ExtractionEnv *envPtr, int addNull, char **strPtrPtr, Tcl_Size *strSizePtr)
+static int AllocAndExtractString(Tcl_Interp* interp, ExtractionEnv* envPtr, int addNull, char** strPtrPtr, Tcl_Size* strSizePtr)
 {
-  Tcl_Size hLen, allocLen;
-  char *strBuf;
-  char *imagePtr;
-  char *imageEnd;
+    Tcl_Size hLen, allocLen;
+    char* strBuf;
+    char* imagePtr;
+    char* imageEnd;
 
-  /*
-   * read the length from the header; we don't need to move the extraction
-   * environment back, because ExtractString does not expect a count field.
-   * But make sure we skip to just past end-of-line
-   */
+    /*
+     * read the length from the header; we don't need to move the extraction
+     * environment back, because ExtractString does not expect a count field.
+     * But make sure we skip to just past end-of-line
+     */
 
-  if (ExtractTclSize(interp, envPtr, &hLen) != TCL_OK) {
-    return TCL_ERROR;
-  }
-
-  /*
-   * skip to EOL, but not beyond, because that belongs to the string
-   */
-
-  imagePtr = envPtr->curImagePtr;
-  imageEnd = envPtr->imageEnd;
-  for (;;) {
-    if (imagePtr == imageEnd) {
-      {
-        Tcl_Obj *res = Tcl_GetObjResult(interp);
-        Tcl_AppendToObj(res, prematureEnd, -1);
-      }
-      return TCL_ERROR;
+    if (ExtractTclSize(interp, envPtr, &hLen) != TCL_OK)
+    {
+        return TCL_ERROR;
     }
-    if (*imagePtr == '\n') {
-      break;
+
+    /*
+     * skip to EOL, but not beyond, because that belongs to the string
+     */
+
+    imagePtr = envPtr->curImagePtr;
+    imageEnd = envPtr->imageEnd;
+    for (;;)
+    {
+        if (imagePtr == imageEnd)
+        {
+            {
+                Tcl_Obj* res = Tcl_GetObjResult(interp);
+                Tcl_AppendToObj(res, prematureEnd, -1);
+            }
+            return TCL_ERROR;
+        }
+        if (*imagePtr == '\n')
+        {
+            break;
+        }
+        imagePtr += 1;
     }
-    imagePtr += 1;
-  }
 
-  envPtr->curImagePtr = imagePtr + 1;
+    envPtr->curImagePtr = imagePtr + 1;
 
-  allocLen = (addNull) ? hLen + 1 : hLen;
-  strBuf = (char *) Tcl_Alloc((size_t) allocLen);
-  if (ExtractString(interp, hLen, envPtr, strBuf, hLen) != TCL_OK) {
-    Tcl_Free(strBuf);
-    return TCL_ERROR;
-  }
+    allocLen = (addNull) ? hLen + 1 : hLen;
+    strBuf = (char*)Tcl_Alloc((size_t)allocLen);
+    if (ExtractString(interp, hLen, envPtr, strBuf, hLen) != TCL_OK)
+    {
+        Tcl_Free(strBuf);
+        return TCL_ERROR;
+    }
 
-  *strPtrPtr = strBuf;
-  *strSizePtr = hLen;
+    *strPtrPtr = strBuf;
+    *strSizePtr = hLen;
 
-  if (addNull) {
-    strBuf[hLen] = '\0';
-  }
+    if (addNull)
+    {
+        strBuf[hLen] = '\0';
+    }
 
-  return TCL_OK;
+    return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1110,50 +1170,57 @@ AllocAndExtractString(Tcl_Interp *interp, ExtractionEnv *envPtr, int addNull, ch
  */
 
 static int
-ExtractObjArray(Tcl_Interp *interp, Tcl_Size numLitObjects, ExtractionEnv *envPtr, Tcl_Obj **objArray, Tcl_Size objArraySize)
+ExtractObjArray(Tcl_Interp* interp, Tcl_Size numLitObjects, ExtractionEnv* envPtr, Tcl_Obj** objArray, Tcl_Size objArraySize)
 {
-  Tcl_Size hnumLitObjects;
-  Tcl_Size iObj;
-  Tcl_Obj *objPtr;
+    Tcl_Size hnumLitObjects;
+    Tcl_Size iObj;
+    Tcl_Obj* objPtr;
 
-  /*
-   * read the number of objects from the header; we need to do this even
-   * in cases where the number is passed in.
-   * Then do the checks if necessary.
-   */
-  if (ExtractTclSize(interp, envPtr, &hnumLitObjects) != TCL_OK) {
-    return TCL_ERROR;
-  }
-
-  if (numLitObjects < 0) {
-    numLitObjects = hnumLitObjects;
-  } else if (numLitObjects != hnumLitObjects) {
+    /*
+     * read the number of objects from the header; we need to do this even
+     * in cases where the number is passed in.
+     * Then do the checks if necessary.
+     */
+    if (ExtractTclSize(interp, envPtr, &hnumLitObjects) != TCL_OK)
     {
-      Tcl_Obj *res = Tcl_GetObjResult(interp);
-      Tcl_AppendToObj(res, "inconsistent object array size", -1);
+        return TCL_ERROR;
     }
-    return TCL_ERROR;
-  }
 
-  if (numLitObjects > objArraySize) {
+    if (numLitObjects < 0)
     {
-      Tcl_Obj *res = Tcl_GetObjResult(interp);
-      Tcl_AppendToObj(res, "object array too big for storage", -1);
+        numLitObjects = hnumLitObjects;
     }
-    return TCL_ERROR;
-  }
-
-  for (iObj=0 ; iObj < numLitObjects ; iObj++) {
-    objPtr = ExtractObject(interp, envPtr);
-    if (!objPtr) {
-      return TCL_ERROR;
+    else if (numLitObjects != hnumLitObjects)
+    {
+        {
+            Tcl_Obj* res = Tcl_GetObjResult(interp);
+            Tcl_AppendToObj(res, "inconsistent object array size", -1);
+        }
+        return TCL_ERROR;
     }
-    objArray[iObj] = objPtr;
-  }
 
-  return TCL_OK;
+    if (numLitObjects > objArraySize)
+    {
+        {
+            Tcl_Obj* res = Tcl_GetObjResult(interp);
+            Tcl_AppendToObj(res, "object array too big for storage", -1);
+        }
+        return TCL_ERROR;
+    }
+
+    for (iObj = 0; iObj < numLitObjects; iObj++)
+    {
+        objPtr = ExtractObject(interp, envPtr);
+        if (!objPtr)
+        {
+            return TCL_ERROR;
+        }
+        objArray[iObj] = objPtr;
+    }
+
+    return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1174,193 +1241,220 @@ ExtractObjArray(Tcl_Interp *interp, Tcl_Size numLitObjects, ExtractionEnv *envPt
  *----------------------------------------------------------------------
  */
 
-static Tcl_Obj *
-ExtractObject(Tcl_Interp *interp, ExtractionEnv *envPtr)
+static Tcl_Obj* ExtractObject(Tcl_Interp* interp, ExtractionEnv* envPtr)
 {
-  Tcl_Obj *objPtr = NULL;
-  char *imagePtr;
-  char *imageEnd;
-  char *objString;
-  char typeCode;
-  Tcl_Size objStringLength;
-  const Tcl_ObjType *objTypePtr = NULL;
+    Tcl_Obj* objPtr = NULL;
+    char* imagePtr;
+    char* imageEnd;
+    char* objString;
+    char typeCode;
+    Tcl_Size objStringLength;
+    const Tcl_ObjType* objTypePtr = NULL;
 
-  imagePtr = envPtr->curImagePtr;
-  imageEnd = envPtr->imageEnd;
+    imagePtr = envPtr->curImagePtr;
+    imageEnd = envPtr->imageEnd;
 
-  /*
-   * skip whitespace, get the typecode
-   */
-
-  for (;;) {
-    if (imagePtr == imageEnd) {
-      {
-        Tcl_Obj *res = Tcl_GetObjResult(interp);
-        Tcl_AppendToObj(res, prematureEnd, -1);
-      }
-      return NULL;
-    }
-    if (!isspace(UCHAR(*imagePtr))) {
-      break;
-    }
-    imagePtr += 1;
-  }
-
-  typeCode = *imagePtr;
-  imagePtr += 1;
-  envPtr->curImagePtr = imagePtr;
-
-  /*
-   * process by object type.
-   */
-
-  if (typeCode == CMP_STRING_CODE) {
-    if (AllocAndExtractString(interp, envPtr, 1, &objString, &objStringLength) != TCL_OK) {
-      return NULL;
-    }
-
-    objPtr = Tcl_NewObj();
-    objPtr->bytes = objString;
-    objPtr->length = objStringLength;
-    Tcl_IncrRefCount(objPtr);
-
-  } else if (typeCode == CMP_XSTRING_CODE) {
-    if (AllocAndExtractByteSequence(interp, envPtr, 1, (unsigned char **) &objString, &objStringLength) != TCL_OK) {
-      return NULL;
-    }
-    objPtr = Tcl_NewObj();
-    objPtr->bytes = objString;
-    objPtr->length = objStringLength;
-    Tcl_IncrRefCount(objPtr);
-
-  } else {
     /*
-     * skip whitespace
+     * skip whitespace, get the typecode
      */
 
-    for (;;) {
-      if (imagePtr == imageEnd) {
+    for (;;)
+    {
+        if (imagePtr == imageEnd)
         {
-          Tcl_Obj *res = Tcl_GetObjResult(interp);
-          Tcl_AppendToObj(res, prematureEnd, -1);
+            {
+                Tcl_Obj* res = Tcl_GetObjResult(interp);
+                Tcl_AppendToObj(res, prematureEnd, -1);
+            }
+            return NULL;
         }
-        return NULL;
-      }
-      if (!isspace(UCHAR(*imagePtr))) {
-        break;
-      }
-      imagePtr += 1;
+        if (!isspace(UCHAR(*imagePtr)))
+        {
+            break;
+        }
+        imagePtr += 1;
     }
 
+    typeCode = *imagePtr;
+    imagePtr += 1;
     envPtr->curImagePtr = imagePtr;
 
-    if (typeCode == CMP_INT_CODE) {
-      objPtr = CreateSimpleObject(envPtr);
-      objTypePtr = cmpIntType;
-    } else if (typeCode == CMP_DOUBLE_CODE) {
-      objPtr = CreateSimpleObject(envPtr);
-      objTypePtr = cmpDoubleType;
-    } else if (typeCode == CMP_BOOLEAN_CODE) {
-      objPtr = CreateSimpleObject(envPtr);
-      objTypePtr = NULL;
-    } else if (typeCode == CMP_BYTECODE_CODE) {
-      /*
-       * This block is a copy of most of the code in
-       * ExtractCompiledFile; unfortunately, we can't share the two
-       * because here I need the final values of the local extraction
-       * environment so that I can update the outer one.
-       */
+    /*
+     * process by object type.
+     */
 
-      ExtractionEnv localExEnv;
+    if (typeCode == CMP_STRING_CODE)
+    {
+        if (AllocAndExtractString(interp, envPtr, 1, &objString, &objStringLength) != TCL_OK)
+        {
+            return NULL;
+        }
 
-      InitExtractEnv(imagePtr, imageEnd, &localExEnv);
-      localExEnv.sig = envPtr->sig;
-
-      if (ExtractByteCode(interp, &localExEnv) != TCL_OK) {
-        CleanupExtractEnv(&localExEnv);
-        return NULL;
-      }
-
-      /*
-       * create the new object.
-       * We give its string representation a dummy value, so that
-       * commands like "info body" don't cause a panic. The reason
-       * "info body" does is this: "info body" simply looks up the
-       * body object and returns on the stack. Later, when we access
-       * the object as a string, Tcl_GetStringFromObj calls the
-       * type's updateStringProc, which for bytecodes panics.
-       * So put a dummy to avoid the call.
-       * The side effects of this need to be investigated further.
-       */
-
-      objPtr = Tcl_NewStringObj(noSourceCode, -1);
-      Tcl_IncrRefCount(objPtr);
-
-      objPtr->internalRep.otherValuePtr = (void *) localExEnv.codePtr;
-      objPtr->typePtr = (Tcl_ObjType*) cmpByteCodeType;
-
-      localExEnv.codePtr->refCount++;
-
-      /*
-       * skip over the ByteCode representation we just read in
-       */
-
-      envPtr->curImagePtr = localExEnv.curImagePtr;
-
-      CleanupExtractEnv(&localExEnv);
-    } else if (typeCode == CMP_PROCBODY_CODE) {
-      /*
-       * A ProcBodyType Tcl_Obj contains a ByteCode dump and a
-       * number of fields in a Proc struct.
-       *
-       * First, extract the ByteCode.
-       */
-
-      ExtractionEnv localExEnv;
-      InitExtractEnv(imagePtr, imageEnd, &localExEnv);
-      localExEnv.sig = envPtr->sig;
-
-      if (ExtractByteCode(interp, &localExEnv) != TCL_OK) {
-        CleanupExtractEnv(&localExEnv);
-        return NULL;
-      }
-
-      /*
-       * skip over the ByteCode representation we just read in, then
-       * finish reading in the object.
-       */
-
-      envPtr->curImagePtr = localExEnv.curImagePtr;
-
-      objPtr = ExtractProcBody(interp, localExEnv.codePtr, envPtr);
-      if (objPtr) {
+        objPtr = Tcl_NewStringObj(objString, objStringLength);
+        Tcl_Free(objString);
         Tcl_IncrRefCount(objPtr);
-      }
+    }
+    else if (typeCode == CMP_XSTRING_CODE)
+    {
+        if (AllocAndExtractByteSequence(interp, envPtr, 1, (unsigned char**)&objString, &objStringLength) != TCL_OK)
+        {
+            return NULL;
+        }
+        objPtr = Tcl_NewStringObj(objString, objStringLength);
+        Tcl_Free(objString);
+        Tcl_IncrRefCount(objPtr);
+    }
+    else
+    {
+        /*
+         * skip whitespace
+         */
 
-      CleanupExtractEnv(&localExEnv);
-    } else {
-      char errBuf[2];
-      errBuf[0] = typeCode;
-      errBuf[1] = '\0';
-      {
-        Tcl_Obj *res = Tcl_GetObjResult(interp);
-        Tcl_AppendToObj(res, "unknown object type \"", -1);
-        Tcl_AppendToObj(res, errBuf, -1);
-        Tcl_AppendToObj(res, "\"", -1);
-      }
-      AppendErrorLocation(interp, envPtr);
-      return NULL;
+        for (;;)
+        {
+            if (imagePtr == imageEnd)
+            {
+                {
+                    Tcl_Obj* res = Tcl_GetObjResult(interp);
+                    Tcl_AppendToObj(res, prematureEnd, -1);
+                }
+                return NULL;
+            }
+            if (!isspace(UCHAR(*imagePtr)))
+            {
+                break;
+            }
+            imagePtr += 1;
+        }
+
+        envPtr->curImagePtr = imagePtr;
+
+        if (typeCode == CMP_INT_CODE)
+        {
+            objPtr = CreateSimpleObject(envPtr);
+            objTypePtr = cmpIntType;
+        }
+        else if (typeCode == CMP_DOUBLE_CODE)
+        {
+            objPtr = CreateSimpleObject(envPtr);
+            objTypePtr = cmpDoubleType;
+        }
+        else if (typeCode == CMP_BOOLEAN_CODE)
+        {
+            objPtr = CreateSimpleObject(envPtr);
+            objTypePtr = NULL;
+        }
+        else if (typeCode == CMP_BYTECODE_CODE)
+        {
+            /*
+             * This block is a copy of most of the code in
+             * ExtractCompiledFile; unfortunately, we can't share the two
+             * because here I need the final values of the local extraction
+             * environment so that I can update the outer one.
+             */
+
+            ExtractionEnv localExEnv;
+
+            InitExtractEnv(imagePtr, imageEnd, &localExEnv);
+            localExEnv.sig = envPtr->sig;
+
+            if (ExtractByteCode(interp, &localExEnv) != TCL_OK)
+            {
+                localExEnv.codePtr = NULL;
+                CleanupExtractEnv(&localExEnv);
+                return NULL;
+            }
+
+            /*
+             * create the new object.
+             * We give its string representation a dummy value, so that
+             * commands like "info body" don't cause a panic. The reason
+             * "info body" does is this: "info body" simply looks up the
+             * body object and returns on the stack. Later, when we access
+             * the object as a string, Tcl_GetStringFromObj calls the
+             * type's updateStringProc, which for bytecodes panics.
+             * So put a dummy to avoid the call.
+             * The side effects of this need to be investigated further.
+             */
+
+            objPtr = Tcl_NewStringObj(noSourceCode, -1);
+            Tcl_IncrRefCount(objPtr);
+            Tcl_ObjInternalRep ir;
+            ir.twoPtrValue.ptr1 = (void*)localExEnv.codePtr;
+            ir.twoPtrValue.ptr2 = NULL;
+            Tcl_StoreInternalRep(objPtr, cmpByteCodeType, &ir);
+            localExEnv.codePtr->refCount++;
+
+            /*
+             * skip over the ByteCode representation we just read in
+             */
+
+            envPtr->curImagePtr = localExEnv.curImagePtr;
+
+            localExEnv.codePtr = NULL;
+            CleanupExtractEnv(&localExEnv);
+        }
+        else if (typeCode == CMP_PROCBODY_CODE)
+        {
+            /*
+             * A ProcBodyType Tcl_Obj contains a ByteCode dump and a
+             * number of fields in a Proc struct.
+             *
+             * First, extract the ByteCode.
+             */
+
+            ExtractionEnv localExEnv;
+            InitExtractEnv(imagePtr, imageEnd, &localExEnv);
+            localExEnv.sig = envPtr->sig;
+
+            if (ExtractByteCode(interp, &localExEnv) != TCL_OK)
+            {
+                localExEnv.codePtr = NULL;
+                CleanupExtractEnv(&localExEnv);
+                return NULL;
+            }
+
+            /*
+             * skip over the ByteCode representation we just read in, then
+             * finish reading in the object.
+             */
+
+            envPtr->curImagePtr = localExEnv.curImagePtr;
+
+            objPtr = ExtractProcBody(interp, localExEnv.codePtr, envPtr);
+            if (objPtr)
+            {
+                Tcl_IncrRefCount(objPtr);
+            }
+
+            localExEnv.codePtr = NULL;
+            CleanupExtractEnv(&localExEnv);
+        }
+        else
+        {
+            char errBuf[2];
+            errBuf[0] = typeCode;
+            errBuf[1] = '\0';
+            {
+                Tcl_Obj* res = Tcl_GetObjResult(interp);
+                Tcl_AppendToObj(res, "unknown object type \"", -1);
+                Tcl_AppendToObj(res, errBuf, -1);
+                Tcl_AppendToObj(res, "\"", -1);
+            }
+            AppendErrorLocation(interp, envPtr);
+            return NULL;
+        }
+
+        if (objTypePtr && (Tcl_ConvertToType(interp, objPtr, (Tcl_ObjType*)objTypePtr) != TCL_OK))
+        {
+            Tcl_DecrRefCount(objPtr);
+            return NULL;
+        }
     }
 
-    if (objTypePtr && (Tcl_ConvertToType(interp, objPtr, (Tcl_ObjType *) objTypePtr) != TCL_OK)) {
-      Tcl_DecrRefCount(objPtr);
-      return NULL;
-    }
-  }
-
-  return objPtr;
+    return objPtr;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1379,23 +1473,22 @@ ExtractObject(Tcl_Interp *interp, ExtractionEnv *envPtr)
  *----------------------------------------------------------------------
  */
 
-static Tcl_Obj *
-CreateSimpleObject(ExtractionEnv *envPtr)
+static Tcl_Obj* CreateSimpleObject(ExtractionEnv* envPtr)
 {
-  char *endPtr;
-  char *imagePtr = envPtr->curImagePtr;
-  Tcl_Obj *objPtr;
+    char* endPtr;
+    char* imagePtr = envPtr->curImagePtr;
+    Tcl_Obj* objPtr;
 
-  endPtr = FindEnd(imagePtr, envPtr->imageEnd);
+    endPtr = FindEnd(imagePtr, envPtr->imageEnd);
 
-  objPtr = Tcl_NewStringObj(imagePtr, endPtr - imagePtr);
-  Tcl_IncrRefCount(objPtr);
+    objPtr = Tcl_NewStringObj(imagePtr, endPtr - imagePtr);
+    Tcl_IncrRefCount(objPtr);
 
-  envPtr->curImagePtr = endPtr;
+    envPtr->curImagePtr = endPtr;
 
-  return objPtr;
+    return objPtr;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1422,104 +1515,115 @@ CreateSimpleObject(ExtractionEnv *envPtr)
  *----------------------------------------------------------------------
  */
 
-static int
-ExtractExcRangeArray(Tcl_Interp *interp, Tcl_Size numExceptRanges, ExtractionEnv *envPtr, ExceptionRange *excArray, Tcl_Size excArraySize)
+static int ExtractExcRangeArray(
+    Tcl_Interp* interp, Tcl_Size numExceptRanges, ExtractionEnv* envPtr, ExceptionRange* excArray, Tcl_Size excArraySize)
 {
-  char *imagePtr;
-  char *imageEnd;
-  Tcl_Size hnumExceptRanges, iRange;
-  char codeType;
-  ExceptionRange *excPtr = excArray;
+    char* imagePtr;
+    char* imageEnd;
+    Tcl_Size hnumExceptRanges, iRange;
+    char codeType;
+    ExceptionRange* excPtr = excArray;
 
-  /*
-   * read the number of exception ranges from the header; we need to do
-   * this even in cases where the number is passed in.
-   * Then do the checks if necessary.
-   */
-
-  if (ExtractTclSize(interp, envPtr, &hnumExceptRanges) != TCL_OK) {
-    return TCL_ERROR;
-  }
-
-  if (numExceptRanges < 0) {
-    numExceptRanges = hnumExceptRanges;
-  } else if (numExceptRanges != hnumExceptRanges) {
-    {
-      Tcl_Obj *res = Tcl_GetObjResult(interp);
-      Tcl_AppendToObj(res, "inconsistent exception ranges array size", -1);
-    }
-    AppendErrorLocation(interp, envPtr);
-    return TCL_ERROR;
-  }
-
-  if (numExceptRanges > excArraySize) {
-    {
-      Tcl_Obj *res = Tcl_GetObjResult(interp);
-      Tcl_AppendToObj(res, "exception ranges array too big for storage", -1);
-    }
-    AppendErrorLocation(interp, envPtr);
-    return TCL_ERROR;
-  }
-
-  imagePtr = envPtr->curImagePtr;
-  imageEnd = envPtr->imageEnd;
-
-  for (iRange=0 ; iRange < numExceptRanges ; iRange++) {
     /*
-     * skip whitespace.
+     * read the number of exception ranges from the header; we need to do
+     * this even in cases where the number is passed in.
+     * Then do the checks if necessary.
      */
 
-    for (;;) {
-      if (imagePtr == imageEnd) {
-        {
-          Tcl_Obj *res = Tcl_GetObjResult(interp);
-          Tcl_AppendToObj(res, prematureEnd, -1);
-        }
+    if (ExtractTclSize(interp, envPtr, &hnumExceptRanges) != TCL_OK)
+    {
         return TCL_ERROR;
-      }
-      if (!isspace(UCHAR(*imagePtr))) {
-        break;
-      }
-      imagePtr += 1;
     }
 
-    codeType = *imagePtr;
-    imagePtr += 1;
-    envPtr->curImagePtr = imagePtr;
-
-    /*
-     * look up the type, then read in all the Tcl_Size values.
-     */
-
-    if (ExcRangeFromName((Tcl_Size) codeType, &excPtr->type) < 0) {
-      char errBuf[2];
-      errBuf[0] = codeType;
-      errBuf[1] = '\0';
-      {
-        Tcl_Obj *res = Tcl_GetObjResult(interp);
-        Tcl_AppendToObj(res, "unknown exception range type: ", -1);
-        Tcl_AppendToObj(res, errBuf, -1);
-      }
-      AppendErrorLocation(interp, envPtr);
-      return TCL_ERROR;
+    if (numExceptRanges < 0)
+    {
+        numExceptRanges = hnumExceptRanges;
+    }
+    else if (numExceptRanges != hnumExceptRanges)
+    {
+        {
+            Tcl_Obj* res = Tcl_GetObjResult(interp);
+            Tcl_AppendToObj(res, "inconsistent exception ranges array size", -1);
+        }
+        AppendErrorLocation(interp, envPtr);
+        return TCL_ERROR;
     }
 
-    if ((ExtractTclSize(interp, envPtr, &excPtr->nestingLevel) != TCL_OK)
-        || (ExtractTclSize(interp, envPtr, &excPtr->codeOffset) != TCL_OK)
-        || (ExtractTclSize(interp, envPtr, &excPtr->numCodeBytes) != TCL_OK)
-        || (ExtractTclSize(interp, envPtr, &excPtr->breakOffset) != TCL_OK)
-        || (ExtractTclSize(interp, envPtr, &excPtr->continueOffset) != TCL_OK)
-        || (ExtractTclSize(interp, envPtr, &excPtr->catchOffset) != TCL_OK)) {
-      return TCL_ERROR;
+    if (numExceptRanges > excArraySize)
+    {
+        {
+            Tcl_Obj* res = Tcl_GetObjResult(interp);
+            Tcl_AppendToObj(res, "exception ranges array too big for storage", -1);
+        }
+        AppendErrorLocation(interp, envPtr);
+        return TCL_ERROR;
     }
 
-    excPtr += 1;
     imagePtr = envPtr->curImagePtr;
-  }
+    imageEnd = envPtr->imageEnd;
 
-  return TCL_OK;
+    for (iRange = 0; iRange < numExceptRanges; iRange++)
+    {
+        /*
+         * skip whitespace.
+         */
+
+        for (;;)
+        {
+            if (imagePtr == imageEnd)
+            {
+                {
+                    Tcl_Obj* res = Tcl_GetObjResult(interp);
+                    Tcl_AppendToObj(res, prematureEnd, -1);
+                }
+                return TCL_ERROR;
+            }
+            if (!isspace(UCHAR(*imagePtr)))
+            {
+                break;
+            }
+            imagePtr += 1;
+        }
+
+        codeType = *imagePtr;
+        imagePtr += 1;
+        envPtr->curImagePtr = imagePtr;
+
+        /*
+         * look up the type, then read in all the Tcl_Size values.
+         */
+
+        if (ExcRangeFromName((Tcl_Size)codeType, &excPtr->type) < 0)
+        {
+            char errBuf[2];
+            errBuf[0] = codeType;
+            errBuf[1] = '\0';
+            {
+                Tcl_Obj* res = Tcl_GetObjResult(interp);
+                Tcl_AppendToObj(res, "unknown exception range type: ", -1);
+                Tcl_AppendToObj(res, errBuf, -1);
+            }
+            AppendErrorLocation(interp, envPtr);
+            return TCL_ERROR;
+        }
+
+        if ((ExtractTclSize(interp, envPtr, &excPtr->nestingLevel) != TCL_OK) ||
+            (ExtractTclSize(interp, envPtr, &excPtr->codeOffset) != TCL_OK) ||
+            (ExtractTclSize(interp, envPtr, &excPtr->numCodeBytes) != TCL_OK) ||
+            (ExtractTclSize(interp, envPtr, &excPtr->breakOffset) != TCL_OK) ||
+            (ExtractTclSize(interp, envPtr, &excPtr->continueOffset) != TCL_OK) ||
+            (ExtractTclSize(interp, envPtr, &excPtr->catchOffset) != TCL_OK))
+        {
+            return TCL_ERROR;
+        }
+
+        excPtr += 1;
+        imagePtr = envPtr->curImagePtr;
+    }
+
+    return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1546,111 +1650,130 @@ ExtractExcRangeArray(Tcl_Interp *interp, Tcl_Size numExceptRanges, ExtractionEnv
  *----------------------------------------------------------------------
  */
 
-static int
-ExtractAuxDataArray(Tcl_Interp *interp, Tcl_Size numAuxDataItems, ExtractionEnv *envPtr, AuxData *auxDataArray, Tcl_Size auxDataArraySize)
+static int ExtractAuxDataArray(
+    Tcl_Interp* interp, Tcl_Size numAuxDataItems, ExtractionEnv* envPtr, AuxData* auxDataArray, Tcl_Size auxDataArraySize)
 {
-  char *imagePtr;
-  char *imageEnd;
-  Tcl_Size hNumAuxDataItems, iAuxData;
-  AuxData *auxPtr = auxDataArray;
-  char typeCode;
-  int result;
+    char* imagePtr;
+    char* imageEnd;
+    Tcl_Size hNumAuxDataItems, iAuxData;
+    AuxData* auxPtr = auxDataArray;
+    char typeCode;
+    int result;
 
-  /*
-   * read the number of AuxData items from the header; we need to do
-   * this even in cases where the number is passed in.
-   * Then do the checks if necessary.
-   */
-
-  if (ExtractTclSize(interp, envPtr, &hNumAuxDataItems) != TCL_OK) {
-    return TCL_ERROR;
-  }
-
-  if (numAuxDataItems < 0) {
-    numAuxDataItems = hNumAuxDataItems;
-  } else if (numAuxDataItems != hNumAuxDataItems) {
-    {
-      Tcl_Obj *res = Tcl_GetObjResult(interp);
-      Tcl_AppendToObj(res, "inconsistent aux data array size", -1);
-    }
-    AppendErrorLocation(interp, envPtr);
-    return TCL_ERROR;
-  }
-
-  if (numAuxDataItems > auxDataArraySize) {
-    {
-      Tcl_Obj *res = Tcl_GetObjResult(interp);
-      Tcl_AppendToObj(res, "aux data array too big for storage", -1);
-    }
-    AppendErrorLocation(interp, envPtr);
-    return TCL_ERROR;
-  }
-
-  imagePtr = envPtr->curImagePtr;
-  imageEnd = envPtr->imageEnd;
-
-  for (iAuxData=0 ; iAuxData < numAuxDataItems ; iAuxData++) {
     /*
-     * skip whitespace
+     * read the number of AuxData items from the header; we need to do
+     * this even in cases where the number is passed in.
+     * Then do the checks if necessary.
      */
 
-    for (;;) {
-      if (imagePtr == imageEnd) {
-        {
-          Tcl_Obj *res = Tcl_GetObjResult(interp);
-          Tcl_AppendToObj(res, prematureEnd, -1);
-        }
+    if (ExtractTclSize(interp, envPtr, &hNumAuxDataItems) != TCL_OK)
+    {
         return TCL_ERROR;
-      }
-      if (!isspace(UCHAR(*imagePtr))) {
-        break;
-      }
-      imagePtr += 1;
     }
 
-    typeCode = *imagePtr;
-    imagePtr += 1;
-    envPtr->curImagePtr = imagePtr;
-
-    /*
-     * look up the type, then dispatch to an extractor routine based on it
-     */
-
-    if (typeCode == CMP_JUMPTABLE_INFO) {
-      result = ExtractJumptableInfo(interp, envPtr, auxPtr);
-      if (result != TCL_OK) {
-        return result;
-      }
-    } else if (typeCode == CMP_DICTUPDATE_INFO) {
-      result = ExtractDictUpdateInfo(interp, envPtr, auxPtr);
-      if (result != TCL_OK) {
-        return result;
-      }
-    } else if (typeCode == CMP_NEW_FOREACH_INFO) {
-      result = ExtractNewForeachInfo(interp, envPtr, auxPtr);
-      if (result != TCL_OK) {
-        return result;
-      }
-    } else {
-      char errBuf[2];
-      errBuf[0] = typeCode;
-      errBuf[1] = '\0';
-      {
-        Tcl_Obj *res = Tcl_GetObjResult(interp);
-        Tcl_AppendToObj(res, "unknown aux data type: ", -1);
-        Tcl_AppendToObj(res, errBuf, -1);
-      }
-      AppendErrorLocation(interp, envPtr);
-      return TCL_ERROR;
+    if (numAuxDataItems < 0)
+    {
+        numAuxDataItems = hNumAuxDataItems;
+    }
+    else if (numAuxDataItems != hNumAuxDataItems)
+    {
+        {
+            Tcl_Obj* res = Tcl_GetObjResult(interp);
+            Tcl_AppendToObj(res, "inconsistent aux data array size", -1);
+        }
+        AppendErrorLocation(interp, envPtr);
+        return TCL_ERROR;
     }
 
-    auxPtr += 1;
+    if (numAuxDataItems > auxDataArraySize)
+    {
+        {
+            Tcl_Obj* res = Tcl_GetObjResult(interp);
+            Tcl_AppendToObj(res, "aux data array too big for storage", -1);
+        }
+        AppendErrorLocation(interp, envPtr);
+        return TCL_ERROR;
+    }
+
     imagePtr = envPtr->curImagePtr;
-  }
+    imageEnd = envPtr->imageEnd;
 
-  return TCL_OK;
+    for (iAuxData = 0; iAuxData < numAuxDataItems; iAuxData++)
+    {
+        /*
+         * skip whitespace
+         */
+
+        for (;;)
+        {
+            if (imagePtr == imageEnd)
+            {
+                {
+                    Tcl_Obj* res = Tcl_GetObjResult(interp);
+                    Tcl_AppendToObj(res, prematureEnd, -1);
+                }
+                return TCL_ERROR;
+            }
+            if (!isspace(UCHAR(*imagePtr)))
+            {
+                break;
+            }
+            imagePtr += 1;
+        }
+
+        typeCode = *imagePtr;
+        imagePtr += 1;
+        envPtr->curImagePtr = imagePtr;
+
+        /*
+         * look up the type, then dispatch to an extractor routine based on it
+         */
+
+        if (typeCode == CMP_JUMPTABLE_INFO)
+        {
+            result = ExtractJumptableInfo(interp, envPtr, auxPtr);
+            if (result != TCL_OK)
+            {
+                return result;
+            }
+        }
+        else if (typeCode == CMP_DICTUPDATE_INFO)
+        {
+            result = ExtractDictUpdateInfo(interp, envPtr, auxPtr);
+            if (result != TCL_OK)
+            {
+                return result;
+            }
+        }
+        else if (typeCode == CMP_NEW_FOREACH_INFO)
+        {
+            result = ExtractNewForeachInfo(interp, envPtr, auxPtr);
+            if (result != TCL_OK)
+            {
+                return result;
+            }
+        }
+        else
+        {
+            char errBuf[2];
+            errBuf[0] = typeCode;
+            errBuf[1] = '\0';
+            {
+                Tcl_Obj* res = Tcl_GetObjResult(interp);
+                Tcl_AppendToObj(res, "unknown aux data type: ", -1);
+                Tcl_AppendToObj(res, errBuf, -1);
+            }
+            AppendErrorLocation(interp, envPtr);
+            return TCL_ERROR;
+        }
+
+        auxPtr += 1;
+        imagePtr = envPtr->curImagePtr;
+    }
+
+    return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1669,56 +1792,67 @@ ExtractAuxDataArray(Tcl_Interp *interp, Tcl_Size numAuxDataItems, ExtractionEnv 
  *----------------------------------------------------------------------
  */
 
-static char*
-ExtractSignature(Tcl_Interp *interp, char *codePtr, char *codeEnd, ImageSignature *signaturePtr)
+static char* ExtractSignature(Tcl_Interp* interp, char* codePtr, char* codeEnd, ImageSignature* signaturePtr)
 {
-  static char badMsg[] = "bad image signature in bytecode";
-  char savedChar, *savedCharPtr;
-  Tcl_Size numScanned;
+    static char badMsg[] = "bad image signature in bytecode";
+    char savedChar, *savedCharPtr;
+    Tcl_Size numScanned;
 
-  /*
-   * skip whitespace to the first nonempty line in the image; this skips
-   * over whitespace that could have been inserted by the construct
-   *  loader::bceval {
-   *  ...
-   *  }
-   */
+    /*
+     * skip whitespace to the first nonempty line in the image; this skips
+     * over whitespace that could have been inserted by the construct
+     *  loader::bceval {
+     *  ...
+     *  }
+     */
 
-  for (;;) {
-    if (codePtr == codeEnd) {
-      return NULL;
-    }
-    if (!isspace(UCHAR(*codePtr))) {
-      break;
-    }
-    codePtr += 1;
-  }
-
-  /*
-   * Find the end the string at the first EOL, which delimits the
-   * signature line. The saved pointer will also be used for the return
-   * value.
-   */
-
-  savedCharPtr = strchr(codePtr, '\n');
-  if (!savedCharPtr) {
+    for (;;)
     {
-      Tcl_Obj *res = Tcl_GetObjResult(interp);
-      Tcl_AppendToObj(res, badMsg, -1);
+        if (codePtr == codeEnd)
+        {
+            return NULL;
+        }
+        if (!isspace(UCHAR(*codePtr)))
+        {
+            break;
+        }
+        codePtr += 1;
     }
-    return NULL;
-  }
-  numScanned = sscanf(codePtr, CMP_SIGNATURE_HEADER " %ld %ld.%ld %ld.%ld%c", &signaturePtr->formatNumber, &signaturePtr->cmpMajorVersion, &signaturePtr->cmpMinorVersion, &signaturePtr->tclMajorVersion, &signaturePtr->tclMinorVersion, &savedChar);
-  if ((numScanned != 6) || !isspace(UCHAR(savedChar))) {
+
+    /*
+     * Find the end the string at the first EOL, which delimits the
+     * signature line. The saved pointer will also be used for the return
+     * value.
+     */
+
+    savedCharPtr = strchr(codePtr, '\n');
+    if (!savedCharPtr)
     {
-      Tcl_Obj *res = Tcl_GetObjResult(interp);
-      Tcl_AppendToObj(res, badMsg, -1);
+        {
+            Tcl_Obj* res = Tcl_GetObjResult(interp);
+            Tcl_AppendToObj(res, badMsg, -1);
+        }
+        return NULL;
     }
-    return NULL;
-  }
-  return (savedCharPtr + 1);
+    numScanned = sscanf(codePtr,
+                        CMP_SIGNATURE_HEADER " %ld %ld.%ld %ld.%ld%c",
+                        &signaturePtr->formatNumber,
+                        &signaturePtr->cmpMajorVersion,
+                        &signaturePtr->cmpMinorVersion,
+                        &signaturePtr->tclMajorVersion,
+                        &signaturePtr->tclMinorVersion,
+                        &savedChar);
+    if ((numScanned != 6) || !isspace(UCHAR(savedChar)))
+    {
+        {
+            Tcl_Obj* res = Tcl_GetObjResult(interp);
+            Tcl_AppendToObj(res, badMsg, -1);
+        }
+        return NULL;
+    }
+    return (savedCharPtr + 1);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1736,24 +1870,23 @@ ExtractSignature(Tcl_Interp *interp, char *codePtr, char *codeEnd, ImageSignatur
  *----------------------------------------------------------------------
  */
 
-static int
-CheckSignature(Tcl_Interp *interp, ImageSignature *signaturePtr)
+static int CheckSignature(Tcl_Interp* interp, ImageSignature* signaturePtr)
 {
-
-  if (signaturePtr->formatNumber != formatVersion) {
-    char buf[32];
-    sprintf(buf, "%ld", signaturePtr->formatNumber);
+    if (signaturePtr->formatNumber != formatVersion)
     {
-      Tcl_Obj *res = Tcl_GetObjResult(interp);
-      Tcl_AppendToObj(res, "unsupported bytecode version: ", -1);
-      Tcl_AppendToObj(res, buf, -1);
+        char buf[32];
+        sprintf(buf, "%ld", signaturePtr->formatNumber);
+        {
+            Tcl_Obj* res = Tcl_GetObjResult(interp);
+            Tcl_AppendToObj(res, "unsupported bytecode version: ", -1);
+            Tcl_AppendToObj(res, buf, -1);
+        }
+        return TCL_ERROR;
     }
-    return TCL_ERROR;
-  }
 
-  return TCL_OK;
+    return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1774,65 +1907,74 @@ CheckSignature(Tcl_Interp *interp, ImageSignature *signaturePtr)
  *----------------------------------------------------------------------
  */
 
-static Tcl_Obj*
-ExtractCompiledFile(Tcl_Interp *interp, char *codePtr, Tcl_Size codeLength)
+static Tcl_Obj* ExtractCompiledFile(Tcl_Interp* interp, char* codePtr, Tcl_Size codeLength)
 {
-  ExtractionEnv exEnv;
-  Tcl_Obj *objPtr;
-  char *newCodePtr;
+    ExtractionEnv exEnv;
+    Tcl_Obj* objPtr;
+    char* newCodePtr;
 
-  /*
-   * The signature line contains the version of the interpreter that was
-   * used to generate the compiled script, and that value should be
-   * known to the extraction routines, because formats may change between
-   * releases. For the time being, disregard it.
-   */
+    /*
+     * The signature line contains the version of the interpreter that was
+     * used to generate the compiled script, and that value should be
+     * known to the extraction routines, because formats may change between
+     * releases. For the time being, disregard it.
+     */
 
-  newCodePtr = ExtractSignature(interp, codePtr, (codePtr + codeLength), &(exEnv.sig));
-  if (newCodePtr == NULL) {
-    return NULL;
-  }
-
-  InitExtractEnv(newCodePtr, (codePtr + codeLength), &exEnv);
-
-  /*
-   * Do not allow loading newer bytecodes into older interps
-   */
-  if ((exEnv.sig.tclMajorVersion > tclMajorVersion) ||
-      ((exEnv.sig.tclMajorVersion == tclMajorVersion) &&
-       (exEnv.sig.tclMinorVersion > tclMinorVersion))) {
-    char buf[128];
-
-    CleanupExtractEnv(&exEnv);
-    sprintf(buf, "unable to load bytecode generated for Tcl %ld.%ld into Tcl %ld.%ld", exEnv.sig.tclMajorVersion, exEnv.sig.tclMinorVersion, tclMajorVersion, tclMinorVersion);
+    newCodePtr = ExtractSignature(interp, codePtr, (codePtr + codeLength), &(exEnv.sig));
+    if (newCodePtr == NULL)
     {
-      Tcl_Obj *res = Tcl_GetObjResult(interp);
-      Tcl_AppendToObj(res, buf, -1);
+        return NULL;
     }
-    return NULL;
-  }
 
-  if (ExtractByteCode(interp, &exEnv) != TCL_OK) {
+    InitExtractEnv(newCodePtr, (codePtr + codeLength), &exEnv);
+
+    /*
+     * Do not allow loading newer bytecodes into older interps
+     */
+    if ((exEnv.sig.tclMajorVersion > tclMajorVersion) ||
+        ((exEnv.sig.tclMajorVersion == tclMajorVersion) && (exEnv.sig.tclMinorVersion > tclMinorVersion)))
+    {
+        char buf[128];
+
+        exEnv.codePtr = NULL;
+        CleanupExtractEnv(&exEnv);
+        sprintf(buf,
+                "unable to load bytecode generated for Tcl %ld.%ld into Tcl %ld.%ld",
+                exEnv.sig.tclMajorVersion,
+                exEnv.sig.tclMinorVersion,
+                tclMajorVersion,
+                tclMinorVersion);
+        {
+            Tcl_Obj* res = Tcl_GetObjResult(interp);
+            Tcl_AppendToObj(res, buf, -1);
+        }
+        return NULL;
+    }
+
+    if (ExtractByteCode(interp, &exEnv) != TCL_OK)
+    {
+        exEnv.codePtr = NULL;
+        CleanupExtractEnv(&exEnv);
+        return NULL;
+    }
+
+    /*
+     * See the comment above Tcl_NewStringObj in ExtractObjArray.
+     */
+
+    objPtr = Tcl_NewStringObj(noSourceCode, -1);
+    Tcl_IncrRefCount(objPtr);
+    Tcl_ObjInternalRep ir;
+    ir.twoPtrValue.ptr1 = (void*)exEnv.codePtr;
+    ir.twoPtrValue.ptr2 = NULL;
+    Tcl_StoreInternalRep(objPtr, cmpByteCodeType, &ir);
+    exEnv.codePtr->refCount++;
+    exEnv.codePtr = NULL;
     CleanupExtractEnv(&exEnv);
-    return NULL;
-  }
 
-  /*
-   * See the comment above Tcl_NewStringObj in ExtractObjArray.
-   */
-
-  objPtr = Tcl_NewStringObj(noSourceCode, -1);
-  Tcl_IncrRefCount(objPtr);
-
-  objPtr->internalRep.otherValuePtr = (void *) exEnv.codePtr;
-  objPtr->typePtr = (Tcl_ObjType *) cmpByteCodeType;
-  exEnv.codePtr->refCount++;
-
-  CleanupExtractEnv(&exEnv);
-
-  return objPtr;
+    return objPtr;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1849,17 +1991,16 @@ ExtractCompiledFile(Tcl_Interp *interp, char *codePtr, Tcl_Size codeLength)
  *----------------------------------------------------------------------
  */
 
-static void
-InitExtractEnv(char *codeBase, char *codeEnd, ExtractionEnv *envPtr)
+static void InitExtractEnv(char* codeBase, char* codeEnd, ExtractionEnv* envPtr)
 {
-  envPtr->imageBase = codeBase;
-  envPtr->imageEnd = codeEnd;
-  envPtr->curImagePtr = codeBase;
+    envPtr->imageBase = codeBase;
+    envPtr->imageEnd = codeEnd;
+    envPtr->curImagePtr = codeBase;
 
-  envPtr->codePtr = NULL;
-  envPtr->codeSize = 0;
+    envPtr->codePtr = NULL;
+    envPtr->codeSize = 0;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1876,12 +2017,11 @@ InitExtractEnv(char *codeBase, char *codeEnd, ExtractionEnv *envPtr)
  *----------------------------------------------------------------------
  */
 
-static void
-CleanupExtractEnv(ExtractionEnv *envPtr)
+static void CleanupExtractEnv(ExtractionEnv* envPtr)
 {
-  CleanupByteCode(envPtr);
+    CleanupByteCode(envPtr);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1900,21 +2040,22 @@ CleanupExtractEnv(ExtractionEnv *envPtr)
  *----------------------------------------------------------------------
  */
 
-static int
-ExcRangeFromName(Tcl_Size name, ExceptionRangeType *typePtr)
+static int ExcRangeFromName(Tcl_Size name, ExceptionRangeType* typePtr)
 {
-  const ExcRangeMap *mapPtr;
+    const ExcRangeMap* mapPtr;
 
-  for (mapPtr=&excRangeMap[0] ; mapPtr->name != 0 ; mapPtr++) {
-    if (mapPtr->name == (char) name) {
-      *typePtr = mapPtr->type;
-      return 0;
+    for (mapPtr = &excRangeMap[0]; mapPtr->name != 0; mapPtr++)
+    {
+        if (mapPtr->name == (char)name)
+        {
+            *typePtr = mapPtr->type;
+            return 0;
+        }
     }
-  }
 
-  return -1;
+    return -1;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1932,49 +2073,54 @@ ExcRangeFromName(Tcl_Size name, ExceptionRangeType *typePtr)
  *----------------------------------------------------------------------
  */
 
-static void
-InitTypes()
+static void InitTypes()
 {
-  if (didLoadTypes == 0) {
+    if (didLoadTypes == 0)
+    {
+        cmpTclProProcBodyType = Tcl_GetObjType("procbody");
+        if (!cmpTclProProcBodyType)
+        {
+            Tcl_Panic("InitTypes: failed to find the procbody type");
+        }
 
-    cmpTclProProcBodyType = Tcl_GetObjType("procbody");
-    if (!cmpTclProProcBodyType) {
-      Tcl_Panic("InitTypes: failed to find the procbody type");
+        cmpByteCodeType = Tcl_GetObjType("bytecode");
+        if (!cmpByteCodeType)
+        {
+            Tcl_Panic("InitTypes: failed to find the bytecode type");
+        }
+
+        cmpDoubleType = Tcl_GetObjType("double");
+        if (!cmpDoubleType)
+        {
+            Tcl_Panic("InitTypes: failed to find the double type");
+        }
+
+        Tcl_Obj* obj = Tcl_NewIntObj(0);
+        cmpIntType = obj->typePtr;
+        Tcl_DecrRefCount(obj);
+
+        cmpJumptableInfoType = TclGetAuxDataType("JumptableInfo");
+        if (!cmpJumptableInfoType)
+        {
+            Tcl_Panic("InitTypes: failed to find the JumptableInfo AuxData type");
+        }
+
+        cmpDictUpdateInfoType = TclGetAuxDataType("DictUpdateInfo");
+        if (!cmpDictUpdateInfoType)
+        {
+            Tcl_Panic("InitTypes: failed to find the DictUpdateInfo AuxData type");
+        }
+
+        cmpNewForeachInfoType = TclGetAuxDataType("NewForeachInfo");
+        if (!cmpNewForeachInfoType)
+        {
+            Tcl_Panic("InitTypes: failed to find the NewForeachInfo AuxData type");
+        }
+
+        didLoadTypes += 1;
     }
-
-    cmpByteCodeType = Tcl_GetObjType("bytecode");
-    if (!cmpByteCodeType) {
-      Tcl_Panic("InitTypes: failed to find the bytecode type");
-    }
-
-    cmpDoubleType = Tcl_GetObjType("double");
-    if (!cmpDoubleType) {
-      Tcl_Panic("InitTypes: failed to find the double type");
-    }
-
-    Tcl_Obj *obj = Tcl_NewIntObj(0);
-    cmpIntType = obj->typePtr;
-    Tcl_DecrRefCount(obj);
-
-    cmpJumptableInfoType = TclGetAuxDataType("JumptableInfo");
-    if (!cmpJumptableInfoType) {
-      Tcl_Panic("InitTypes: failed to find the JumptableInfo AuxData type");
-    }
-
-    cmpDictUpdateInfoType = TclGetAuxDataType("DictUpdateInfo");
-    if (!cmpDictUpdateInfoType) {
-      Tcl_Panic("InitTypes: failed to find the DictUpdateInfo AuxData type");
-    }
-
-    cmpNewForeachInfoType = TclGetAuxDataType("NewForeachInfo");
-    if (!cmpNewForeachInfoType) {
-      Tcl_Panic("InitTypes: failed to find the NewForeachInfo AuxData type");
-    }
-
-    didLoadTypes += 1;
-  }
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1994,51 +2140,51 @@ InitTypes()
  *----------------------------------------------------------------------
  */
 
-static int
-InitCompatibilityLayer(Tcl_Interp *interp)
+static int InitCompatibilityLayer(Tcl_Interp* interp)
 {
-  Tcl_CmdInfo info;
+    Tcl_CmdInfo info;
 
-  if (compatibilityLayerInit) {
-    return TCL_OK;
-  }
-
-  /*
-   * Extract a pointer to the proc object command so we can wrap the API.
-   * By extracting the routine, we do not have to add Tcl_ProcObjCmd to
-   * the stubs list.
-   *
-   * Bug #3826: if the proc command is renamed, then this extraction will
-   * yeild the new proc def rather than the Tcl_ProcObjCmd.  HACK: To fix
-   * this problem in the case of the debugger (bug #3089), we check for the
-   * existence of DbgNub_procCmd, which holds the original proc command.
-   */
-
-  if ((!Tcl_GetCommandInfo(interp, "DbgNub_procCmd", &info))
-      || (info.objProc == NULL)) {
-    if ((!Tcl_GetCommandInfo(interp, "proc", &info))
-        || (info.objProc == NULL)) {
-      {
-        Tcl_Obj *res = Tcl_GetObjResult(interp);
-        Tcl_AppendToObj(res, "proc command could not be located.", -1);
-      }
-      return TCL_ERROR;
+    if (compatibilityLayerInit)
+    {
+        return TCL_OK;
     }
-  }
-  bcprocCmdProc = info.objProc;
 
-  /*
-   * Determine what interpreter interface to use.
-   */
+    /*
+     * Extract a pointer to the proc object command so we can wrap the API.
+     * By extracting the routine, we do not have to add Tcl_ProcObjCmd to
+     * the stubs list.
+     *
+     * Bug #3826: if the proc command is renamed, then this extraction will
+     * yeild the new proc def rather than the Tcl_ProcObjCmd.  HACK: To fix
+     * this problem in the case of the debugger (bug #3089), we check for the
+     * existence of DbgNub_procCmd, which holds the original proc command.
+     */
 
-  procBodyFactory = (ProcBodyFactory *) TclNewProcBodyObj;
-  procBodyCleanup = TclProcCleanupProc;
+    if ((!Tcl_GetCommandInfo(interp, "DbgNub_procCmd", &info)) || (info.objProc == NULL))
+    {
+        if ((!Tcl_GetCommandInfo(interp, "proc", &info)) || (info.objProc == NULL))
+        {
+            {
+                Tcl_Obj* res = Tcl_GetObjResult(interp);
+                Tcl_AppendToObj(res, "proc command could not be located.", -1);
+            }
+            return TCL_ERROR;
+        }
+    }
+    bcprocCmdProc = info.objProc;
 
-  compatibilityLayerInit = 1;
+    /*
+     * Determine what interpreter interface to use.
+     */
 
-  return TCL_OK;
+    procBodyFactory = (ProcBodyFactory*)TclNewProcBodyObj;
+    procBodyCleanup = TclProcCleanupProc;
+
+    compatibilityLayerInit = 1;
+
+    return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2058,41 +2204,42 @@ InitCompatibilityLayer(Tcl_Interp *interp)
  *----------------------------------------------------------------------
  */
 
-int
-TbcloadInit(Tcl_Interp *interp)
+int TbcloadInit(Tcl_Interp* interp)
 {
-  if (!Tcl_InitStubs(interp, "9.0", 1)) {
-    return TCL_ERROR;
-  }
+    if (!Tcl_InitStubs(interp, "9.0", 1))
+    {
+        return TCL_ERROR;
+    }
 
-  /*
-   * Initialize the compatibility layer.
-   */
+    /*
+     * Initialize the compatibility layer.
+     */
 
-  if (InitCompatibilityLayer(interp) != TCL_OK) {
-    return TCL_ERROR;
-  }
+    if (InitCompatibilityLayer(interp) != TCL_OK)
+    {
+        return TCL_ERROR;
+    }
 
-  /*
-   * Determine the format version of compiled code.  8.0-8.3 is v1,
-   * 8.4+ is v2 (new bytecode instructions, different var flags).
-   */
-  int major, minor;
-  Tcl_GetVersion(&major, &minor, NULL, NULL);
-  tclMajorVersion = major;
-  tclMinorVersion = minor;
+    /*
+     * Determine the format version of compiled code.  8.0-8.3 is v1,
+     * 8.4+ is v2 (new bytecode instructions, different var flags).
+     */
+    int major, minor;
+    Tcl_GetVersion(&major, &minor, NULL, NULL);
+    tclMajorVersion = major;
+    tclMinorVersion = minor;
 
-  /*
-   * Initialize the local copies of pointers to some built-in object types.
-   * We need to do it because the built-in types are not exported by the
-   * windows Tcl DLL.
-   */
+    /*
+     * Initialize the local copies of pointers to some built-in object types.
+     * We need to do it because the built-in types are not exported by the
+     * windows Tcl DLL.
+     */
 
-  InitTypes();
+    InitTypes();
 
-  return TCL_OK;
+    return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2110,70 +2257,75 @@ TbcloadInit(Tcl_Interp *interp)
  *----------------------------------------------------------------------
  */
 
-static int
-ExtractJumptableInfo(Tcl_Interp *interp, ExtractionEnv *envPtr, AuxData *auxDataPtr)
+static int ExtractJumptableInfo(Tcl_Interp* interp, ExtractionEnv* envPtr, AuxData* auxDataPtr)
 {
-  int result, new;
-  Tcl_Size i, numJmp, value, keyLength;
-  JumptableInfo *infoPtr = NULL;
-  Tcl_HashEntry *hEntry;
-  unsigned char *key;
+    int result, new;
+    Tcl_Size i, numJmp, value, keyLength;
+    JumptableInfo* infoPtr = NULL;
+    Tcl_HashEntry* hEntry;
+    unsigned char* key;
 
-  /*
-   * read in the control variables, allocate and initialize the
-   * JumptableInfo struct.
-   */
+    /*
+     * read in the control variables, allocate and initialize the
+     * JumptableInfo struct.
+     */
 
-  result = ExtractTclSize(interp, envPtr, &numJmp);
-  if (result != TCL_OK) {
+    result = ExtractTclSize(interp, envPtr, &numJmp);
+    if (result != TCL_OK)
+    {
+        return result;
+    }
+
+    infoPtr = (JumptableInfo*)Tcl_Alloc((unsigned)(sizeof(JumptableInfo)));
+    Tcl_InitHashTable(&infoPtr->hashTable, TCL_STRING_KEYS);
+
+    for (i = 0; i < numJmp; i++)
+    {
+        result = ExtractTclSize(interp, envPtr, &value);
+        if (result != TCL_OK)
+        {
+            goto errorReturn;
+        }
+
+        result = AllocAndExtractByteSequence(interp, envPtr, 1, &key, &keyLength);
+        if (result != TCL_OK)
+        {
+            goto errorReturn;
+        }
+        hEntry = Tcl_CreateHashEntry(&infoPtr->hashTable, key, &new);
+        Tcl_Free(key);
+        Tcl_SetHashValue(hEntry, (char*)value);
+    }
+
+    /*
+     * finally! Assign the JumptableInfo to the AuxData.
+     */
+
+    auxDataPtr->type = (AuxDataType*)cmpJumptableInfoType;
+    auxDataPtr->clientData = (void*)infoPtr;
+
+    return TCL_OK;
+
+errorReturn:
+
+    if (infoPtr)
+    {
+        /* free hashtable + JumpTable Structure */
+        Tcl_HashSearch hSearch;
+
+        hEntry = Tcl_FirstHashEntry(&infoPtr->hashTable, &hSearch);
+        while (hEntry)
+        {
+            Tcl_DeleteHashEntry(hEntry);
+            hEntry = Tcl_NextHashEntry(&hSearch);
+        }
+        Tcl_DeleteHashTable(&infoPtr->hashTable);
+        Tcl_Free((char*)infoPtr);
+    }
+
     return result;
-  }
-
-  infoPtr = (JumptableInfo *) Tcl_Alloc((unsigned)(sizeof(JumptableInfo)));
-  Tcl_InitHashTable(&infoPtr->hashTable,TCL_STRING_KEYS);
-
-  for(i=0;i<numJmp;i++) {
-    result = ExtractTclSize(interp, envPtr, &value);
-    if (result != TCL_OK) {
-      goto errorReturn;
-    }
-
-    result = AllocAndExtractByteSequence(interp, envPtr, 1, &key, &keyLength);
-    if (result != TCL_OK) {
-      goto errorReturn;
-    }
-    hEntry = Tcl_CreateHashEntry(&infoPtr->hashTable,key,&new);
-    Tcl_Free(key);
-    Tcl_SetHashValue(hEntry,(char*)value);
-  }
-
-  /*
-   * finally! Assign the JumptableInfo to the AuxData.
-   */
-
-  auxDataPtr->type = (AuxDataType *) cmpJumptableInfoType;
-  auxDataPtr->clientData = (void *) infoPtr;
-
-  return TCL_OK;
-
- errorReturn:
-
-  if (infoPtr) {
-    /* free hashtable + JumpTable Structure */
-    Tcl_HashSearch hSearch;
-
-    hEntry = Tcl_FirstHashEntry(&infoPtr->hashTable,&hSearch);
-    while(hEntry) {
-      Tcl_DeleteHashEntry(hEntry);
-      hEntry = Tcl_NextHashEntry(&hSearch);
-    }
-    Tcl_DeleteHashTable(&infoPtr->hashTable);
-    Tcl_Free((char *) infoPtr);
-  }
-
-  return result;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2191,52 +2343,55 @@ ExtractJumptableInfo(Tcl_Interp *interp, ExtractionEnv *envPtr, AuxData *auxData
  *----------------------------------------------------------------------
  */
 
-static int
-ExtractDictUpdateInfo(Tcl_Interp *interp, ExtractionEnv *envPtr, AuxData *auxDataPtr)
+static int ExtractDictUpdateInfo(Tcl_Interp* interp, ExtractionEnv* envPtr, AuxData* auxDataPtr)
 {
-  int result;
-  Tcl_Size i, numVar, value;
-  DictUpdateInfo *infoPtr = NULL;
+    int result;
+    Tcl_Size i, numVar, value;
+    DictUpdateInfo* infoPtr = NULL;
 
-  /*
-   * read in the control variables, allocate and initialize the
-   * DictUpdateInfo struct.
-   */
+    /*
+     * read in the control variables, allocate and initialize the
+     * DictUpdateInfo struct.
+     */
 
-  result = ExtractTclSize(interp, envPtr, &numVar);
-  if (result != TCL_OK) {
-    return result;
-  }
-
-  infoPtr = (DictUpdateInfo *) Tcl_Alloc((unsigned)(sizeof(DictUpdateInfo)+numVar*sizeof(int)));
-  infoPtr->length = numVar;
-
-  for(i=0; i < numVar;i++) {
-    result = ExtractTclSize(interp, envPtr, &value);
-    if (result != TCL_OK) {
-      goto errorReturn;
+    result = ExtractTclSize(interp, envPtr, &numVar);
+    if (result != TCL_OK)
+    {
+        return result;
     }
-    infoPtr->varIndices [i] = value;
-  }
 
-  /*
-   * finally! Assign the DictUpdateInfo to the AuxData.
-   */
+    infoPtr = (DictUpdateInfo*)Tcl_Alloc((unsigned)(sizeof(DictUpdateInfo) + numVar * sizeof(int)));
+    infoPtr->length = numVar;
 
-  auxDataPtr->type = (AuxDataType *) cmpDictUpdateInfoType;
-  auxDataPtr->clientData = (void *) infoPtr;
+    for (i = 0; i < numVar; i++)
+    {
+        result = ExtractTclSize(interp, envPtr, &value);
+        if (result != TCL_OK)
+        {
+            goto errorReturn;
+        }
+        infoPtr->varIndices[i] = value;
+    }
 
-  return TCL_OK;
+    /*
+     * finally! Assign the DictUpdateInfo to the AuxData.
+     */
 
- errorReturn:
+    auxDataPtr->type = (AuxDataType*)cmpDictUpdateInfoType;
+    auxDataPtr->clientData = (void*)infoPtr;
 
-  if (infoPtr) {
-    Tcl_Free((char *) infoPtr);
-  }
+    return TCL_OK;
 
-  return result;
+errorReturn:
+
+    if (infoPtr)
+    {
+        Tcl_Free((char*)infoPtr);
+    }
+
+    return result;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2255,89 +2410,97 @@ ExtractDictUpdateInfo(Tcl_Interp *interp, ExtractionEnv *envPtr, AuxData *auxDat
  *----------------------------------------------------------------------
  */
 
-static int
-ExtractNewForeachInfo(Tcl_Interp *interp, ExtractionEnv *envPtr, AuxData *auxDataPtr)
+static int ExtractNewForeachInfo(Tcl_Interp* interp, ExtractionEnv* envPtr, AuxData* auxDataPtr)
 {
-  int result;
-  Tcl_Size i, j;
-  Tcl_Size numLists, loopCtTemp, numVars;
-  ForeachInfo *infoPtr = NULL;
-  ForeachVarList *varListPtr = NULL;
-  Tcl_Size *varPtr;
+    int result;
+    Tcl_Size i, j;
+    Tcl_Size numLists, loopCtTemp, numVars;
+    ForeachInfo* infoPtr = NULL;
+    ForeachVarList* varListPtr = NULL;
+    Tcl_Size* varPtr;
 
-  /*
-   * read in the control variables, allocate and initialize the
-   * ForeachInfo struct.
-   */
+    /*
+     * read in the control variables, allocate and initialize the
+     * ForeachInfo struct.
+     */
 
-  result = ExtractTclSize(interp, envPtr, &numLists);
-  if (result != TCL_OK) {
+    result = ExtractTclSize(interp, envPtr, &numLists);
+    if (result != TCL_OK)
+    {
+        return result;
+    }
+
+    /*
+     * The new bytecodes handling foreach do not use firstValueTemp.
+     * Was dropped from saved bytecode. Fake a nice value, see %% below.
+     */
+
+    result = ExtractTclSize(interp, envPtr, &loopCtTemp);
+    if (result != TCL_OK)
+    {
+        return result;
+    }
+
+    infoPtr = (ForeachInfo*)Tcl_Alloc((unsigned)(sizeof(ForeachInfo) + (numLists * sizeof(ForeachVarList*))));
+    infoPtr->numLists = numLists;
+    infoPtr->firstValueTemp = 0; /* %% */
+    infoPtr->loopCtTemp = loopCtTemp;
+    for (i = 0; i < numLists; i++)
+    {
+        infoPtr->varLists[i] = (ForeachVarList*)NULL;
+    }
+
+    /*
+     * now load the ForeachVarList structs
+     */
+
+    for (i = 0; i < numLists; i++)
+    {
+        result = ExtractTclSize(interp, envPtr, &numVars);
+        if (result != TCL_OK)
+        {
+            goto errorReturn;
+        }
+
+        varListPtr = (ForeachVarList*)Tcl_Alloc((unsigned)sizeof(ForeachVarList) + numVars * sizeof(int));
+        infoPtr->varLists[i] = varListPtr;
+        varListPtr->numVars = numVars;
+
+        varPtr = &varListPtr->varIndexes[0];
+        for (j = 0; j < numVars; j++)
+        {
+            result = ExtractTclSize(interp, envPtr, varPtr);
+            if (result != TCL_OK)
+            {
+                goto errorReturn;
+            }
+            varPtr++;
+        }
+    }
+
+    /*
+     * finally! Assign the ForeachInfo to the AuxData.
+     */
+
+    auxDataPtr->type = (AuxDataType*)cmpNewForeachInfoType;
+    auxDataPtr->clientData = (void*)infoPtr;
+
+    return TCL_OK;
+
+errorReturn:
+
+    if (infoPtr)
+    {
+        for (i = 0; i < infoPtr->numLists; i++)
+        {
+            Tcl_Free((char*)infoPtr->varLists[i]);
+        }
+        Tcl_Free((char*)infoPtr);
+    }
+
     return result;
-  }
-
-  /*
-   * The new bytecodes handling foreach do not use firstValueTemp.
-   * Was dropped from saved bytecode. Fake a nice value, see %% below.
-   */
-
-  result = ExtractTclSize(interp, envPtr, &loopCtTemp);
-  if (result != TCL_OK) {
-    return result;
-  }
-
-  infoPtr = (ForeachInfo *) Tcl_Alloc((unsigned)(sizeof(ForeachInfo) + (numLists * sizeof(ForeachVarList *))));
-  infoPtr->numLists = numLists;
-  infoPtr->firstValueTemp = 0; /* %% */
-  infoPtr->loopCtTemp = loopCtTemp;
-  for (i=0 ; i < numLists ; i++) {
-    infoPtr->varLists[i] = (ForeachVarList *) NULL;
-  }
-
-  /*
-   * now load the ForeachVarList structs
-   */
-
-  for (i=0 ; i < numLists ; i++) {
-    result = ExtractTclSize(interp, envPtr, &numVars);
-    if (result != TCL_OK) {
-      goto errorReturn;
-    }
-
-    varListPtr = (ForeachVarList *) Tcl_Alloc((unsigned)sizeof(ForeachVarList) + numVars*sizeof(int));
-    infoPtr->varLists[i] = varListPtr;
-    varListPtr->numVars = numVars;
-
-    varPtr = &varListPtr->varIndexes[0];
-    for (j=0 ; j < numVars ; j++) {
-      result = ExtractTclSize(interp, envPtr, varPtr);
-      if (result != TCL_OK) {
-        goto errorReturn;
-      }
-      varPtr++;
-    }
-  }
-
-  /*
-   * finally! Assign the ForeachInfo to the AuxData.
-   */
-
-  auxDataPtr->type = (AuxDataType *) cmpNewForeachInfoType;
-  auxDataPtr->clientData = (void *) infoPtr;
-
-  return TCL_OK;
-
- errorReturn:
-
-  if (infoPtr) {
-    for (i=0 ; i < infoPtr->numLists ; i++) {
-      Tcl_Free((char *) infoPtr->varLists[i]);
-    }
-    Tcl_Free((char *) infoPtr);
-  }
-
-  return result;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2356,72 +2519,79 @@ ExtractNewForeachInfo(Tcl_Interp *interp, ExtractionEnv *envPtr, AuxData *auxDat
  *----------------------------------------------------------------------
  */
 
-static Tcl_Obj *
-ExtractProcBody(Tcl_Interp *interp, ByteCode *codePtr, ExtractionEnv *envPtr)
+static Tcl_Obj* ExtractProcBody(Tcl_Interp* interp, ByteCode* codePtr, ExtractionEnv* envPtr)
 {
-  Proc *procPtr;
-  Tcl_Obj *bodyPtr;
-  Tcl_Size i;
-  CompiledLocal *localPtr;
+    Proc* procPtr;
+    Tcl_Obj* bodyPtr;
+    Tcl_Size i;
+    CompiledLocal* localPtr;
 
-  /*
-   * we need a bytecode Tcl_Obj to place in the proc. We bump its reference
-   * count because there will be a reference to it in the Proc.
-   * We also bump the reference count on the ByteCode because the object
-   * contains a reference to it.
-   */
+    /*
+     * we need a bytecode Tcl_Obj to place in the proc. We bump its reference
+     * count because there will be a reference to it in the Proc.
+     * We also bump the reference count on the ByteCode because the object
+     * contains a reference to it.
+     */
 
-  bodyPtr = Tcl_NewStringObj(noSourceCode, -1);
-  Tcl_IncrRefCount(bodyPtr);
-  bodyPtr->internalRep.otherValuePtr = (void *) codePtr;
-  bodyPtr->typePtr = (Tcl_ObjType *) cmpByteCodeType;
-  codePtr->refCount++;
+    bodyPtr = Tcl_NewStringObj(noSourceCode, -1);
+    Tcl_IncrRefCount(bodyPtr);
+    Tcl_ObjInternalRep ir;
+    ir.twoPtrValue.ptr1 = (void*)codePtr;
+    ir.twoPtrValue.ptr2 = NULL;
+    Tcl_StoreInternalRep(bodyPtr, cmpByteCodeType, &ir);
+    codePtr->refCount++;
 
-  /*
-   * allocate the proc struct and start populating it.
-   * We initialize the reference count on the Proc to 0 because
-   * ProcBodyNewObj will bump it when it creates a TclProProcBody Tcl_Obj.
-   */
+    /*
+     * allocate the proc struct and start populating it.
+     * We initialize the reference count on the Proc to 0 because
+     * ProcBodyNewObj will bump it when it creates a TclProProcBody Tcl_Obj.
+     */
 
-  procPtr = (Proc *) Tcl_Alloc(sizeof(Proc));
-  procPtr->iPtr = NULL;
-  procPtr->refCount = 0;
-  procPtr->cmdPtr = NULL;
-  procPtr->bodyPtr = bodyPtr;
-  procPtr->numArgs = 0;
-  procPtr->numCompiledLocals = 0;
-  procPtr->firstLocalPtr = NULL;
-  procPtr->lastLocalPtr = NULL;
+    procPtr = (Proc*)Tcl_Alloc(sizeof(Proc));
+    procPtr->iPtr = NULL;
+    procPtr->refCount = 0;
+    procPtr->cmdPtr = NULL;
+    procPtr->bodyPtr = bodyPtr;
+    procPtr->numArgs = 0;
+    procPtr->numCompiledLocals = 0;
+    procPtr->firstLocalPtr = NULL;
+    procPtr->lastLocalPtr = NULL;
 
-  if ((ExtractTclSize(interp, envPtr, &procPtr->numArgs) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &procPtr->numCompiledLocals) != TCL_OK)) {
-    goto cleanAndError;
-  }
-  /*
-   * load the compiled locals info
-   */
+    if ((ExtractTclSize(interp, envPtr, &procPtr->numArgs) != TCL_OK) ||
+        (ExtractTclSize(interp, envPtr, &procPtr->numCompiledLocals) != TCL_OK))
+    {
+        goto cleanAndError;
+    }
+    /*
+     * load the compiled locals info
+     */
 
-  for (i=0 ; i < procPtr->numCompiledLocals ; i++) {
-    localPtr = ExtractCompiledLocal(interp, envPtr);
-    if (!localPtr) {
-      goto cleanAndError;
+    for (i = 0; i < procPtr->numCompiledLocals; i++)
+    {
+        localPtr = ExtractCompiledLocal(interp, envPtr);
+        if (!localPtr)
+        {
+            goto cleanAndError;
+        }
+
+        if (procPtr->firstLocalPtr == NULL)
+        {
+            procPtr->firstLocalPtr = procPtr->lastLocalPtr = localPtr;
+        }
+        else
+        {
+            procPtr->lastLocalPtr->nextPtr = localPtr;
+            procPtr->lastLocalPtr = localPtr;
+        }
     }
 
-    if (procPtr->firstLocalPtr == NULL) {
-      procPtr->firstLocalPtr = procPtr->lastLocalPtr = localPtr;
-    } else {
-      procPtr->lastLocalPtr->nextPtr = localPtr;
-      procPtr->lastLocalPtr = localPtr;
-    }
-  }
+    return (*procBodyFactory)(procPtr);
 
-  return (*procBodyFactory)(procPtr);
-
- cleanAndError:
-  (*procBodyCleanup)(procPtr);
-  return NULL;
+cleanAndError:
+    (*procBodyCleanup)(procPtr);
+    return NULL;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2439,79 +2609,84 @@ ExtractProcBody(Tcl_Interp *interp, ByteCode *codePtr, ExtractionEnv *envPtr)
  *----------------------------------------------------------------------
  */
 
-static CompiledLocal *
-ExtractCompiledLocal(Tcl_Interp *interp, ExtractionEnv *envPtr)
+static CompiledLocal* ExtractCompiledLocal(Tcl_Interp* interp, ExtractionEnv* envPtr)
 {
-  char *curImagePtr;
-  Tcl_Size i, nameLength, hasDef;
-  CompiledLocal *localPtr;
-  unsigned int bit, mask;
+    char* curImagePtr;
+    Tcl_Size i, nameLength, hasDef;
+    CompiledLocal* localPtr;
+    unsigned int bit, mask;
 
-  /*
-   * read the length of the name from the byte sequence header; we need to
-   * do this so that we can allocate the CompiledLocal. Then, let's move
-   * the extraction environment back to where it was at the start of the
-   * call, so that we can call ExtractByteSequence.
-   */
+    /*
+     * read the length of the name from the byte sequence header; we need to
+     * do this so that we can allocate the CompiledLocal. Then, let's move
+     * the extraction environment back to where it was at the start of the
+     * call, so that we can call ExtractByteSequence.
+     */
 
-  curImagePtr = envPtr->curImagePtr;
-  if (ExtractTclSize(interp, envPtr, &nameLength) != TCL_OK) {
-    return NULL;
-  }
-  envPtr->curImagePtr = curImagePtr;
-
-  localPtr = (CompiledLocal *)Tcl_Alloc(offsetof(CompiledLocal, name) + 1U + nameLength);
-
-  localPtr->nextPtr = NULL;
-  localPtr->nameLength = nameLength;
-  localPtr->defValuePtr = NULL;
-  localPtr->flags = 0;
-  localPtr->resolveInfo = NULL;
-
-  if (ExtractByteSequence(interp, nameLength, envPtr, (unsigned char *) &localPtr->name[0], nameLength) != TCL_OK) {
-    Tcl_Free((char *) localPtr);
-    return NULL;
-  }
-
-  localPtr->name[nameLength] = 0;
-
-  /*
-   * extract the fields of the struct, then if necessary extract
-   * the default value for the argument
-   */
-
-  Tcl_Size aux = 0;
-  if ((ExtractTclSize(interp, envPtr, &localPtr->frameIndex) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &hasDef) != TCL_OK)
-      || (ExtractTclSize(interp, envPtr, &aux) != TCL_OK)) {
-    Tcl_Free((char *) localPtr);
-    return NULL;
-  }
-  mask = aux;
-  bit = 1;
-  for (i=0 ; i < varFlagsListSize ; i++) {
-    if (mask & bit) {
-      localPtr->flags |= varFlagsList[i];
+    curImagePtr = envPtr->curImagePtr;
+    if (ExtractTclSize(interp, envPtr, &nameLength) != TCL_OK)
+    {
+        return NULL;
     }
-    bit <<= 1;
-  }
+    envPtr->curImagePtr = curImagePtr;
 
-  /*
-   * now we get the default value if any
-   */
+    localPtr = (CompiledLocal*)Tcl_Alloc(offsetof(CompiledLocal, name) + 1U + nameLength);
 
-  if (hasDef) {
-    Tcl_Obj *objPtr = ExtractObject(interp, envPtr);
-    if (!objPtr) {
-      Tcl_Free((char *) localPtr);
-      return NULL;
+    localPtr->nextPtr = NULL;
+    localPtr->nameLength = nameLength;
+    localPtr->defValuePtr = NULL;
+    localPtr->flags = 0;
+    localPtr->resolveInfo = NULL;
+
+    if (ExtractByteSequence(interp, nameLength, envPtr, (unsigned char*)&localPtr->name[0], nameLength) != TCL_OK)
+    {
+        Tcl_Free((char*)localPtr);
+        return NULL;
     }
-    localPtr->defValuePtr = objPtr;
-  }
 
-  return localPtr;
+    localPtr->name[nameLength] = 0;
+
+    /*
+     * extract the fields of the struct, then if necessary extract
+     * the default value for the argument
+     */
+
+    Tcl_Size aux = 0;
+    if ((ExtractTclSize(interp, envPtr, &localPtr->frameIndex) != TCL_OK) ||
+        (ExtractTclSize(interp, envPtr, &hasDef) != TCL_OK) || (ExtractTclSize(interp, envPtr, &aux) != TCL_OK))
+    {
+        Tcl_Free((char*)localPtr);
+        return NULL;
+    }
+    mask = aux;
+    bit = 1;
+    for (i = 0; i < varFlagsListSize; i++)
+    {
+        if (mask & bit)
+        {
+            localPtr->flags |= varFlagsList[i];
+        }
+        bit <<= 1;
+    }
+
+    /*
+     * now we get the default value if any
+     */
+
+    if (hasDef)
+    {
+        Tcl_Obj* objPtr = ExtractObject(interp, envPtr);
+        if (!objPtr)
+        {
+            Tcl_Free((char*)localPtr);
+            return NULL;
+        }
+        localPtr->defValuePtr = objPtr;
+    }
+
+    return localPtr;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2529,47 +2704,49 @@ ExtractCompiledLocal(Tcl_Interp *interp, ExtractionEnv *envPtr)
  *----------------------------------------------------------------------
  */
 
-static void
-AppendErrorLocation(Tcl_Interp *interp, ExtractionEnv *envPtr)
+static void AppendErrorLocation(Tcl_Interp* interp, ExtractionEnv* envPtr)
 {
-  char *imagePtr, *imageEnd, *endPtr, *basePtr, *lastPtr, *p;
-  char savedChar;
+    char *imagePtr, *imageEnd, *endPtr, *basePtr, *lastPtr, *p;
+    char savedChar;
 
-  /*
-   * we append about 32 characters, give or take a few to make sure we
-   * show a full TCL word at the end
-   */
+    /*
+     * we append about 32 characters, give or take a few to make sure we
+     * show a full TCL word at the end
+     */
 
-  basePtr = envPtr->curImagePtr;
-  imagePtr = basePtr;
-  imageEnd = envPtr->imageEnd;
-  lastPtr = basePtr + 32;
-  if (lastPtr > imageEnd) {
-    lastPtr = imageEnd;
-  }
-  endPtr = lastPtr;
-
-  for (;;) {
-    p = FindEnd(imagePtr, imageEnd);
-    if ((p <= imagePtr) || (p > lastPtr)) {
-      break;
+    basePtr = envPtr->curImagePtr;
+    imagePtr = basePtr;
+    imageEnd = envPtr->imageEnd;
+    lastPtr = basePtr + 32;
+    if (lastPtr > imageEnd)
+    {
+        lastPtr = imageEnd;
     }
-    endPtr = p;
-    imagePtr = p + 1;
-  }
+    endPtr = lastPtr;
 
-  savedChar = *endPtr;
-  *endPtr = '\0';
+    for (;;)
+    {
+        p = FindEnd(imagePtr, imageEnd);
+        if ((p <= imagePtr) || (p > lastPtr))
+        {
+            break;
+        }
+        endPtr = p;
+        imagePtr = p + 1;
+    }
 
-  {
-    Tcl_Obj *res = Tcl_GetObjResult(interp);
-    Tcl_AppendToObj(res, " at or near \"", -1);
-    Tcl_AppendToObj(res, basePtr, -1);
-    Tcl_AppendToObj(res, "\"", -1);
-  }
-  *endPtr = savedChar;
+    savedChar = *endPtr;
+    *endPtr = '\0';
+
+    {
+        Tcl_Obj* res = Tcl_GetObjResult(interp);
+        Tcl_AppendToObj(res, " at or near \"", -1);
+        Tcl_AppendToObj(res, basePtr, -1);
+        Tcl_AppendToObj(res, "\"", -1);
+    }
+    *endPtr = savedChar;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2586,14 +2763,13 @@ AppendErrorLocation(Tcl_Interp *interp, ExtractionEnv *envPtr)
  *----------------------------------------------------------------------
  */
 
-static void
-A85InitDecodeContext(Tcl_Size numBytes, unsigned char *decodeBuf, A85DecodeContext *ctxPtr)
+static void A85InitDecodeContext(Tcl_Size numBytes, unsigned char* decodeBuf, A85DecodeContext* ctxPtr)
 {
-  ctxPtr->bytesToDecode = numBytes;
-  ctxPtr->curPtr = decodeBuf;
-  ctxPtr->curChar = 0;
+    ctxPtr->bytesToDecode = numBytes;
+    ctxPtr->curPtr = decodeBuf;
+    ctxPtr->curChar = 0;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2613,123 +2789,136 @@ A85InitDecodeContext(Tcl_Size numBytes, unsigned char *decodeBuf, A85DecodeConte
  *----------------------------------------------------------------------
  */
 
-static int
-A85DecodeByte(Tcl_Interp *interp, int code, A85DecodeContext *ctxPtr)
+static int A85DecodeByte(Tcl_Interp* interp, int code, A85DecodeContext* ctxPtr)
 {
-  int i;
-  int *decodePtr;
-  long int decodeWord;
-  unsigned char *curPtr = ctxPtr->curPtr;
+    int i;
+    int* decodePtr;
+    long int decodeWord;
+    unsigned char* curPtr = ctxPtr->curPtr;
 
-  if (code == A85_Z) {
-    if (ctxPtr->curChar != 0) {
-      {
-        Tcl_Obj *res = Tcl_GetObjResult(interp);
-        Tcl_AppendToObj(res, "malformed byte sequence", -1);
-      }
-      return TCL_ERROR;
-    }
-
-    *curPtr = 0;
-    curPtr += 1;
-
-    *curPtr = 0;
-    curPtr += 1;
-
-    *curPtr = 0;
-    curPtr += 1;
-
-    *curPtr = 0;
-    curPtr += 1;
-
-    ctxPtr->bytesToDecode -= 4;
-  } else {
-    ctxPtr->decodeBuf[ctxPtr->curChar] = code;
-    ctxPtr->curChar += 1;
-
-    /*
-     * There are two cases here:
-     *  - if bytesToDecode > 4, then we expect that a full 5-tuple was
-     *    written to the encoded buffer.
-     *  - if bytesToDecode < 4, then the encoded buffer contains only
-     *    the first (bytesToDecode + 1) characters in the 5-tuple, since
-     *    the others can be reconstructed.
-     *
-     * Also, decoded bytes are stored in reverse order of their packing
-     * order, because that's how the encoder did it.
-     */
-
-    if (ctxPtr->bytesToDecode >= 4) {
-      if (ctxPtr->curChar > 4) {
-        /*
-         * The decode word was stored in base-85, least significant to
-         * most significant char
-         */
-
-        decodePtr = &ctxPtr->decodeBuf[4];
-        decodeWord = *decodePtr;
-        for (i=1 ; i < 5 ; i++) {
-          decodePtr -= 1;
-          decodeWord = times85(decodeWord) + *decodePtr;
+    if (code == A85_Z)
+    {
+        if (ctxPtr->curChar != 0)
+        {
+            {
+                Tcl_Obj* res = Tcl_GetObjResult(interp);
+                Tcl_AppendToObj(res, "malformed byte sequence", -1);
+            }
+            return TCL_ERROR;
         }
 
-        *curPtr = (int)(decodeWord & 0xff);
+        *curPtr = 0;
         curPtr += 1;
 
-        *curPtr = (int)((decodeWord >> 8) & 0xff);
+        *curPtr = 0;
         curPtr += 1;
 
-        *curPtr = (int)((decodeWord >> 16) & 0xff);
+        *curPtr = 0;
         curPtr += 1;
 
-        *curPtr = (int)((decodeWord >> 24) & 0xff);
+        *curPtr = 0;
         curPtr += 1;
 
-        ctxPtr->curChar = 0;
         ctxPtr->bytesToDecode -= 4;
-      }
-    } else {
-      int i;
-      int bytesToDecode = ctxPtr->bytesToDecode;
-      if (ctxPtr->curChar > bytesToDecode) {
+    }
+    else
+    {
+        ctxPtr->decodeBuf[ctxPtr->curChar] = code;
+        ctxPtr->curChar += 1;
+
         /*
-         * reconstruct the missing characters, then extract the bytes
+         * There are two cases here:
+         *  - if bytesToDecode > 4, then we expect that a full 5-tuple was
+         *    written to the encoded buffer.
+         *  - if bytesToDecode < 4, then the encoded buffer contains only
+         *    the first (bytesToDecode + 1) characters in the 5-tuple, since
+         *    the others can be reconstructed.
+         *
+         * Also, decoded bytes are stored in reverse order of their packing
+         * order, because that's how the encoder did it.
          */
 
-        for (i=bytesToDecode+1 ; i < 5 ; i++) {
-          ctxPtr->decodeBuf[i] = 0;
+        if (ctxPtr->bytesToDecode >= 4)
+        {
+            if (ctxPtr->curChar > 4)
+            {
+                /*
+                 * The decode word was stored in base-85, least significant to
+                 * most significant char
+                 */
+
+                decodePtr = &ctxPtr->decodeBuf[4];
+                decodeWord = *decodePtr;
+                for (i = 1; i < 5; i++)
+                {
+                    decodePtr -= 1;
+                    decodeWord = times85(decodeWord) + *decodePtr;
+                }
+
+                *curPtr = (int)(decodeWord & 0xff);
+                curPtr += 1;
+
+                *curPtr = (int)((decodeWord >> 8) & 0xff);
+                curPtr += 1;
+
+                *curPtr = (int)((decodeWord >> 16) & 0xff);
+                curPtr += 1;
+
+                *curPtr = (int)((decodeWord >> 24) & 0xff);
+                curPtr += 1;
+
+                ctxPtr->curChar = 0;
+                ctxPtr->bytesToDecode -= 4;
+            }
         }
+        else
+        {
+            int i;
+            int bytesToDecode = ctxPtr->bytesToDecode;
+            if (ctxPtr->curChar > bytesToDecode)
+            {
+                /*
+                 * reconstruct the missing characters, then extract the bytes
+                 */
 
-        decodePtr = &ctxPtr->decodeBuf[4];
-        decodeWord = *decodePtr;
-        for (i=1 ; i < 5 ; i++) {
-          decodePtr -= 1;
-          decodeWord = times85(decodeWord) + *decodePtr;
+                for (i = bytesToDecode + 1; i < 5; i++)
+                {
+                    ctxPtr->decodeBuf[i] = 0;
+                }
+
+                decodePtr = &ctxPtr->decodeBuf[4];
+                decodeWord = *decodePtr;
+                for (i = 1; i < 5; i++)
+                {
+                    decodePtr -= 1;
+                    decodeWord = times85(decodeWord) + *decodePtr;
+                }
+
+                *curPtr = (int)(decodeWord & 0xff);
+                curPtr += 1;
+
+                if (bytesToDecode > 1)
+                {
+                    *curPtr = (int)((decodeWord >> 8) & 0xff);
+                    curPtr += 1;
+                }
+
+                if (bytesToDecode > 2)
+                {
+                    *curPtr = (int)((decodeWord >> 16) & 0xff);
+                    curPtr += 1;
+                }
+
+                ctxPtr->curChar = 0;
+                ctxPtr->bytesToDecode = 0;
+            }
         }
-
-        *curPtr = (int)(decodeWord & 0xff);
-        curPtr += 1;
-
-        if (bytesToDecode > 1) {
-          *curPtr = (int)((decodeWord >> 8) & 0xff);
-          curPtr += 1;
-        }
-
-        if (bytesToDecode > 2) {
-          *curPtr = (int)((decodeWord >> 16) & 0xff);
-          curPtr += 1;
-        }
-
-        ctxPtr->curChar = 0;
-        ctxPtr->bytesToDecode = 0;
-      }
     }
-  }
 
-  ctxPtr->curPtr = curPtr;
-  return TCL_OK;
+    ctxPtr->curPtr = curPtr;
+    return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2747,14 +2936,15 @@ A85DecodeByte(Tcl_Interp *interp, int code, A85DecodeContext *ctxPtr)
  *----------------------------------------------------------------------
  */
 
-static char *
-FindEnd(char *first, char *last)
+static char* FindEnd(char* first, char* last)
 {
-  char *p;
-  for (p = first; p != last; p++) {
-    if (isspace(UCHAR(*p))) {
-      break;
+    char* p;
+    for (p = first; p != last; p++)
+    {
+        if (isspace(UCHAR(*p)))
+        {
+            break;
+        }
     }
-  }
-  return p;
+    return p;
 }

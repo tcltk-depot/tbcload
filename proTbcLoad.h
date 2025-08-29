@@ -13,14 +13,14 @@
  */
 
 #ifndef _PROTBCLOAD_H
-# define _PROTBCLOAD_H
+#define _PROTBCLOAD_H
 
-# include "tcl.h"
+#include "tcl.h"
 
-# ifdef BUILD_tbcload
-# undef TCL_STORAGE_CLASS
-# define TCL_STORAGE_CLASS DLLEXPORT
-# endif
+#ifdef BUILD_tbcload
+#undef TCL_STORAGE_CLASS
+#define TCL_STORAGE_CLASS DLLEXPORT
+#endif
 
 /*
  *----------------------------------------------------------------
@@ -28,14 +28,14 @@
  *----------------------------------------------------------------
  */
 
-EXTERN int	Tbcload_EvalObjCmd (void *dummy, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[]);
-EXTERN int	Tbcload_ProcObjCmd (void *dummy, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[]);
-EXTERN const char *TbcloadGetPackageName (void);
+EXTERN int Tbcload_EvalObjCmd(void* dummy, Tcl_Interp* interp, Tcl_Size objc, Tcl_Obj* const objv[]);
+EXTERN int Tbcload_ProcObjCmd(void* dummy, Tcl_Interp* interp, Tcl_Size objc, Tcl_Obj* const objv[]);
+EXTERN const char* TbcloadGetPackageName(void);
 
-EXTERN int	Tbcload_Init (Tcl_Interp *interp);
-EXTERN int	Tbcload_SafeInit (Tcl_Interp *interp);
+EXTERN int Tbcload_Init(Tcl_Interp* interp);
+EXTERN int Tbcload_SafeInit(Tcl_Interp* interp);
 
-# undef TCL_STORAGE_CLASS
-# define TCL_STORAGE_CLASS DLLIMPORT
+#undef TCL_STORAGE_CLASS
+#define TCL_STORAGE_CLASS DLLIMPORT
 
 #endif /* _PROTBCLOAD_H */

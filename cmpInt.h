@@ -19,9 +19,9 @@
 #ifndef _CMPINT_H
 #define _CMPINT_H
 
+#include "tclCompile.h"
 #include "tclInt.h"
 #include "tclPort.h"
-#include "tclCompile.h"
 
 /*
  * USE_CATCH_WRAPPER controls whether the emitted code has a catch around
@@ -46,13 +46,13 @@
  * (the first patch will start at 1).
  */
 
-#define CMP_MAJOR_VERSION   1
-#define CMP_MINOR_VERSION   9
-#define CMP_RELEASE_LEVEL   0
-#define CMP_RELEASE_SERIAL  0
+#define CMP_MAJOR_VERSION 1
+#define CMP_MINOR_VERSION 9
+#define CMP_RELEASE_LEVEL 0
+#define CMP_RELEASE_SERIAL 0
 
-#define CMP_VERSION         "1.9"
-#define CMP_PATCH_LEVEL     "1.9.0"
+#define CMP_VERSION "1.9"
+#define CMP_PATCH_LEVEL "1.9.0"
 
 /*
  * This macro includes code that emits and reads the location map for a
@@ -74,20 +74,22 @@
  * arrays for a ByteCode structure
  */
 
-typedef struct LocMapSizes {
-    Tcl_Size codeDeltaSize;     /* size of the codeDeltaStart array */
-    Tcl_Size codeLengthSize;    /* size of the codeLengthStart array */
-    Tcl_Size srcDeltaSize;      /* size of the srcDeltaStart array */
-    Tcl_Size srcLengthSize;     /* size of the srcLengthStart array */
+typedef struct LocMapSizes
+{
+    Tcl_Size codeDeltaSize;  /* size of the codeDeltaStart array */
+    Tcl_Size codeLengthSize; /* size of the codeLengthStart array */
+    Tcl_Size srcDeltaSize;   /* size of the srcDeltaStart array */
+    Tcl_Size srcLengthSize;  /* size of the srcLengthStart array */
 } LocMapSizes;
 
 /*
  * Map between ExceptionRangeType enums and type codes
  */
 
-typedef struct ExcRangeMap {
-  ExceptionRangeType type;  /* The TCL enum for a given exception range type */
-  char name;                /* and its corresponding code */
+typedef struct ExcRangeMap
+{
+    ExceptionRangeType type; /* The TCL enum for a given exception range type */
+    char name;               /* and its corresponding code */
 } ExcRangeMap;
 
 /*
@@ -101,10 +103,11 @@ typedef struct ExcRangeMap {
  * it could be kept local to the writer.
  */
 
-typedef struct InstLocList {
-    struct InstLocList *next;	/* next proc location in the list */
-    Tcl_Size bytecodeOffset;	/* offset to the fist byte in the instruction */
-    Tcl_Size commandIndex;		/* the command to which this instruction belongs */
+typedef struct InstLocList
+{
+    struct InstLocList* next; /* next proc location in the list */
+    Tcl_Size bytecodeOffset;  /* offset to the fist byte in the instruction */
+    Tcl_Size commandIndex;    /* the command to which this instruction belongs */
 } InstLocList;
 
 /*
@@ -116,28 +119,29 @@ typedef struct InstLocList {
  * could be kept local to the writer.
  */
 
-typedef struct ProcBodyInfo {
-    Tcl_Size nameIndex;		    /* index in the object table of the object
-                                 * containing the name of the proc */
-    Tcl_Size argsIndex;		    /* index in the object table of the object
-                                 * containing the argument list for the proc */
-    Tcl_Size bodyOrigIndex;		/* the original index in the object table of
-                                 * the object containing the body of the
-                                 * procedure */
-    Tcl_Size bodyNewIndex;		/* the new index in the object table of the
-                                 * object containing the body of the procedure.
-                                 * The index is different from the original if
-                                 * the object had been shared */
-    Tcl_Size procOffset;		/* offset to the location in the bytecodes
-                                 * where the "proc" string is pushed on the
-                                 * stack. This is the start of the instruction
-                                 * group for a proc command execution */
-    Tcl_Size bodyOffset;		/* offset to the location in the bytecodes
-                                 * where this procedure body is pushed on the
-                                 * stack */
-    Tcl_Size commandIndex;		/* the command number for this proc; values
-                                 * start at 0 for the first command in the
-                                 * script. */
+typedef struct ProcBodyInfo
+{
+    Tcl_Size nameIndex;     /* index in the object table of the object
+                             * containing the name of the proc */
+    Tcl_Size argsIndex;     /* index in the object table of the object
+                             * containing the argument list for the proc */
+    Tcl_Size bodyOrigIndex; /* the original index in the object table of
+                             * the object containing the body of the
+                             * procedure */
+    Tcl_Size bodyNewIndex;  /* the new index in the object table of the
+                             * object containing the body of the procedure.
+                             * The index is different from the original if
+                             * the object had been shared */
+    Tcl_Size procOffset;    /* offset to the location in the bytecodes
+                             * where the "proc" string is pushed on the
+                             * stack. This is the start of the instruction
+                             * group for a proc command execution */
+    Tcl_Size bodyOffset;    /* offset to the location in the bytecodes
+                             * where this procedure body is pushed on the
+                             * stack */
+    Tcl_Size commandIndex;  /* the command number for this proc; values
+                             * start at 0 for the first command in the
+                             * script. */
 } ProcBodyInfo;
 
 /*
@@ -151,22 +155,23 @@ typedef struct ProcBodyInfo {
  * could be kept local to the writer.
  */
 
-typedef struct PostProcessInfo {
-    struct InstLocList *procs;	/* the list of proc locations */
-    Tcl_Size numProcs;		    /* how many entries in the list */
-    Tcl_HashTable objTable;	    /* this hash table is keyed by object
-                                 * index and is used to store information
-                                 * about references to this object. */
-    ProcBodyInfo **infoArrayPtr;/* NULL-terminated array to pointers of
-                                 * info structs that are generated for
-                                 * each proc at the start of the post
-                                 * processing step */
-    Tcl_Size numCompiledBodies;	/* total number of procedure bodies that
-                                 * were compiled. Not all procedure
-                                 * bodies are compiled. */
-    Tcl_Size numUnshares;		/* total number of unshares that were
-                                 * performed. If 0, then there were no
-                                 * shared procedure bodies */
+typedef struct PostProcessInfo
+{
+    struct InstLocList* procs;   /* the list of proc locations */
+    Tcl_Size numProcs;           /* how many entries in the list */
+    Tcl_HashTable objTable;      /* this hash table is keyed by object
+                                  * index and is used to store information
+                                  * about references to this object. */
+    ProcBodyInfo** infoArrayPtr; /* NULL-terminated array to pointers of
+                                  * info structs that are generated for
+                                  * each proc at the start of the post
+                                  * processing step */
+    Tcl_Size numCompiledBodies;  /* total number of procedure bodies that
+                                  * were compiled. Not all procedure
+                                  * bodies are compiled. */
+    Tcl_Size numUnshares;        /* total number of unshares that were
+                                  * performed. If 0, then there were no
+                                  * shared procedure bodies */
 } PostProcessInfo;
 
 /*
@@ -178,12 +183,13 @@ typedef struct PostProcessInfo {
  * could be kept local to the writer.
  */
 
-typedef struct CompilerContext {
-    PostProcessInfo *ppi;	    /* post-processing context for the currently active compilation */
-    Tcl_Size numProcs;	        /* how many proc commands were seen in the compiled script */
-    Tcl_Size numCompiledBodies;	/* how many proc bodies were compiled */
-    Tcl_Size numUnsharedBodies;	/* how many were unshared */
-    Tcl_Size numUnshares;		/* how many copies were made when unsharing proc bodies */
+typedef struct CompilerContext
+{
+    PostProcessInfo* ppi;       /* post-processing context for the currently active compilation */
+    Tcl_Size numProcs;          /* how many proc commands were seen in the compiled script */
+    Tcl_Size numCompiledBodies; /* how many proc bodies were compiled */
+    Tcl_Size numUnsharedBodies; /* how many were unshared */
+    Tcl_Size numUnshares;       /* how many copies were made when unsharing proc bodies */
 } CompilerContext;
 
 /*
@@ -225,25 +231,25 @@ typedef struct CompilerContext {
  * CMP_STRING_TYPE is an uncompressed/unencoded string,
  * CMP_XSTRING_TYPE is compressed/encoded
  */
-#define CMP_INT_CODE	    'i'
-#define CMP_DOUBLE_CODE     'd'
-#define CMP_STRING_CODE     's'
-#define CMP_XSTRING_CODE    'x'
-#define CMP_PROCBODY_CODE   'p'
-#define CMP_BOOLEAN_CODE    'b'
-#define CMP_BYTECODE_CODE   'c'
+#define CMP_INT_CODE 'i'
+#define CMP_DOUBLE_CODE 'd'
+#define CMP_STRING_CODE 's'
+#define CMP_XSTRING_CODE 'x'
+#define CMP_PROCBODY_CODE 'p'
+#define CMP_BOOLEAN_CODE 'b'
+#define CMP_BYTECODE_CODE 'c'
 
 /*
  * The one-letter codes for the exception range types
  */
-#define CMP_LOOP_EXCEPTION_RANGE    'L'
-#define CMP_CATCH_EXCEPTION_RANGE   'C'
+#define CMP_LOOP_EXCEPTION_RANGE 'L'
+#define CMP_CATCH_EXCEPTION_RANGE 'C'
 
 /*
  * The one-letter codes for the AuxData types range types
  */
-#define CMP_JUMPTABLE_INFO   'J'
-#define CMP_DICTUPDATE_INFO  'D'
+#define CMP_JUMPTABLE_INFO 'J'
+#define CMP_DICTUPDATE_INFO 'D'
 #define CMP_NEW_FOREACH_INFO 'f'
 
 /*
@@ -265,9 +271,9 @@ typedef struct CompilerContext {
  *---------------------------------------------------------------
  */
 
-EXTERN void ProcBodyCleanupProc (Proc *procPtr);
-EXTERN Tcl_Obj *ProcBodyNewObj (Proc *procPtr);
-EXTERN void ProcBodyRegisterTypes (void);
+EXTERN void ProcBodyCleanupProc(Proc* procPtr);
+EXTERN Tcl_Obj* ProcBodyNewObj(Proc* procPtr);
+EXTERN void ProcBodyRegisterTypes(void);
 
 /*
  *----------------------------------------------------------------
@@ -275,7 +281,7 @@ EXTERN void ProcBodyRegisterTypes (void);
  *----------------------------------------------------------------
  */
 
-EXTERN int TbcloadInit (Tcl_Interp *interp);
+EXTERN int TbcloadInit(Tcl_Interp* interp);
 
 #undef TCL_STORAGE_CLASS
 #define TCL_STORAGE_CLASS DLLIMPORT
@@ -286,8 +292,8 @@ EXTERN int TbcloadInit (Tcl_Interp *interp);
  *----------------------------------------------------------------
  */
 
-EXTERN const char *CmptestGetPackageName ();
-EXTERN int  Cmptest_Init (Tcl_Interp *interp);
+EXTERN const char* CmptestGetPackageName();
+EXTERN int Cmptest_Init(Tcl_Interp* interp);
 
 /*
  *----------------------------------------------------------------
@@ -303,9 +309,9 @@ EXTERN int  Cmptest_Init (Tcl_Interp *interp);
 #endif
 
 /* GetContext exported for use by Test package. */
-EXTERN CompilerContext *CompilerGetContext (Tcl_Interp *interp);
+EXTERN CompilerContext* CompilerGetContext(Tcl_Interp* interp);
 
-EXTERN void	CompilerInit (Tcl_Interp *interp);
+EXTERN void CompilerInit(Tcl_Interp* interp);
 
 #undef TCL_STORAGE_CLASS
 #define TCL_STORAGE_CLASS DLLIMPORT

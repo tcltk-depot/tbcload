@@ -1,4 +1,6 @@
+#-*-Tcl-*-
 # tbcload tests: load and execute compiled .tbc files produced by compiler tests
+
 if {"::tcltest" ni [namespace children]} {
     package require tcltest
     namespace import -force ::tcltest::*
@@ -8,8 +10,7 @@ namespace eval ::tcltest {}
 
 set testDir [file normalize [file dirname [info script]]]
 # The compiler writes outputs to tclcompiler-1.9.0/tests/out
-set compOut [file join [file dirname [file dirname $testDir]] tclcompiler-1.9.0 tests out]
-
+set compOut [file join [file dirname [file dirname $testDir]] tclcompiler tests out]
 set tbc1 [file join $compOut tc1.tbc]
 set tbc2 [file join $compOut tc2.tbc]
 set tbc3 [file join $compOut tc3.tbc]
@@ -77,7 +78,7 @@ test tbcload-1.6 {preamble executed when loading tc1pre.tbc} -constraints have_t
     unset -nocomplain ::_p
     with_captured_puts { source $tbc1pre }
     expr {[info exists ::_p] && $_p == 1}
-} -result 1
+} -result {1}
 
 test tbcload-1.7 {namespace proc from tc6 works} -constraints have_tbc_6 -body {
     source $tbc6

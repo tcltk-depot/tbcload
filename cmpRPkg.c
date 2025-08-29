@@ -1,207 +1,128 @@
 /*
  * cmpRPkg.c --
  *
- *  This file contains the C interfaces to the Tcl load command for the
- *  Reader package: the Reader_Init function.
- *
- * Copyright (c) 1998-2000 Ajuba Solutions
- * Copyright (c) 2000, 2017 ActiveState Software Inc.
- *
- * See the file "license.terms" for information on usage and redistribution
- * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
- *
- * RCS: @(#) $Id: cmpRPkg.c,v 1.2 2000/05/30 22:19:06 wart Exp $
+ *  Loader package initialization and command/variable registration (reader).
+ *  Tcl 9 modernization:
+ *    - No string eval for namespace/export
+ *    - Idempotent namespace handling
+ *    - Const-correct tables, modern ObjCmd signatures via headers
+ *    - Safe string assembly via Tcl_DString
  */
 
+#include <string.h>
 #include "cmpInt.h"
 #include "proTbcLoad.h"
 
-/*
- * name and version of this package
- */
+/* Package identity (TEA) */
+static char packageName[] = PACKAGE_NAME;       /* "tbcload" */
+static char packageVersion[] = PACKAGE_VERSION; /* e.g. "1.9.0" */
 
-static char packageName[]    = PACKAGE_NAME;
-static char packageVersion[] = PACKAGE_VERSION;
+/* Command names (from headers) */
+static char evalCommand[] = CMP_EVAL_COMMAND; /* "bceval" */
+static char procCommand[] = CMP_PROC_COMMAND; /* "bcproc"  */
 
-/*
- * Name of the commands exported by this package
- */
-
-static char evalCommand[] = CMP_EVAL_COMMAND;
-static char procCommand[] = CMP_PROC_COMMAND;
-
-/*
- * this struct describes an entry in the table of command names and command
- * procs
- */
-
+/* Command table */
 typedef struct CmdTable
 {
-  char *cmdName;
-  Tcl_ObjCmdProc *proc;
-  int exportIt;
+    const char* cmdName;   /* unqualified, e.g. "bceval" */
+    Tcl_ObjCmdProc2* proc; /* implementation */
+    int exportIt;          /* nonzero => export */
 } CmdTable;
 
-/*
- * Declarations for functions defined in this file.
- */
+/* Forward decls */
+static int TbcloadInitInternal(Tcl_Interp* interp, int isSafe);
+static int RegisterCommand(Tcl_Interp* interp, const char* nsName, const CmdTable* cmd);
 
-static int  TbcloadInitInternal (Tcl_Interp *interp, int isSafe);
-static int  RegisterCommand (Tcl_Interp* interp, char *namespace, const CmdTable *cmdTablePtr);
+/* Command lists */
+static const CmdTable commands[] = {{evalCommand, Tbcload_EvalObjCmd, 1}, {procCommand, Tbcload_ProcObjCmd, 1}, {NULL, NULL, 0}};
 
-/*
- * List of commands to create when the package is loaded; must go after the
- * declarations of the enable command procedure.
- */
+static const CmdTable safeCommands[] = {
+    {evalCommand, Tbcload_EvalObjCmd, 1}, {procCommand, Tbcload_ProcObjCmd, 1}, {NULL, NULL, 0}};
 
-static const CmdTable commands[] =
-  {
-    { evalCommand,  Tbcload_EvalObjCmd, 1 },
-    { procCommand,  Tbcload_ProcObjCmd, 1 },
-    { 0, 0, 0 }
-  };
-
-static const CmdTable safeCommands[] =
-  {
-    { evalCommand,  Tbcload_EvalObjCmd, 1 },
-    { procCommand,  Tbcload_ProcObjCmd, 1 },
-    { 0, 0, 0 }
-  };
-
-/*
- *----------------------------------------------------------------------
- *
- * Tbcload_Init --
- *
- *  This procedure initializes the Loader package.
- *  The initialization consists of add ing the compiled script loader to the
- *  set of registered script loaders.
- *
- * Results:
- *  A standard Tcl result.
- *
- * Side effects:
- *  None.
- *
- *----------------------------------------------------------------------
- */
-
-int
-Tbcload_Init(Tcl_Interp *interp)
+/* --- helpers --- */
+static Tcl_Namespace* GetOrCreateNamespace(Tcl_Interp* interp, const char* nsName)
 {
-  return TbcloadInitInternal(interp, 0);
-}
-
-/*
- *----------------------------------------------------------------------
- *
- * Tbcload_SafeInit --
- *
- *  This procedure initializes the Loader package.
- *  The initialization consists of add ing the compiled script loader to the
- *  set of registered script loaders.
- *
- * Results:
- *  A standard Tcl result.
- *
- * Side effects:
- *  None.
- *
- *----------------------------------------------------------------------
- */
-
-int
-Tbcload_SafeInit(Tcl_Interp *interp)
-{
-  return TbcloadInitInternal(interp, 1);
-}
-
-/*
- *----------------------------------------------------------------------
- *
- * RegisterCommand --
- *
- *  This procedure registers a command in the context of the given namespace.
- *
- * Results:
- *  A standard Tcl result.
- *
- * Side effects:
- *  None.
- *
- *----------------------------------------------------------------------
- */
-
-static int RegisterCommand(Tcl_Interp *interp, char *namespace, const CmdTable *cmdTablePtr)
-{
-  char buf[128];
-
-  if (cmdTablePtr->exportIt) {
-    sprintf(buf, "namespace eval %s { namespace export %s }", namespace, cmdTablePtr->cmdName);
-    if (Tcl_Eval(interp, buf) != TCL_OK)
-      return TCL_ERROR;
-  }
-
-  sprintf(buf, "%s::%s", namespace, cmdTablePtr->cmdName);
-  Tcl_CreateObjCommand(interp, buf, cmdTablePtr->proc, 0, 0);
-
-  return TCL_OK;
-}
-
-/*
- *----------------------------------------------------------------------
- *
- * TbcloadInitInternal --
- *
- *  This procedure initializes the Loader package.
- *  The isSafe flag is 1 if the interpreter is safe, 0 otherwise.
- *
- * Results:
- *  A standard Tcl result.
- *
- * Side effects:
- *  None.
- *
- *----------------------------------------------------------------------
- */
-
-static int
-TbcloadInitInternal(Tcl_Interp *interp, int isSafe)
-{
-  const CmdTable *cmdTablePtr;
-
-  if (TbcloadInit(interp) != TCL_OK) {
-    return TCL_ERROR;
-  }
-
-  cmdTablePtr = (isSafe) ? &safeCommands[0] : &commands[0];
-  for ( ; cmdTablePtr->cmdName ; cmdTablePtr++) {
-    if (RegisterCommand(interp, packageName, cmdTablePtr) != TCL_OK) {
-      return TCL_ERROR;
+    Tcl_Namespace* ns = Tcl_FindNamespace(interp, nsName, NULL, TCL_GLOBAL_ONLY);
+    if (!ns)
+    {
+        ns = Tcl_CreateNamespace(interp, nsName, NULL, NULL);
     }
-  }
-
-  return Tcl_PkgProvide(interp, packageName, packageVersion);
+    return ns;
 }
-
-/*
- *----------------------------------------------------------------------
- *
- * TbcloadGetPackageName --
- *
- *  Returns the package name for the loader package.
- *
- * Results:
- *  See above.
- *
- * Side effects:
- *  None.
- *
- *----------------------------------------------------------------------
- */
 
-const char *
-TbcloadGetPackageName()
+static int RegisterCommand(Tcl_Interp* interp, const char* nsName, const CmdTable* cmd)
 {
-  return packageName;
+    Tcl_Namespace* ns = GetOrCreateNamespace(interp, nsName);
+    if (!ns)
+        return TCL_ERROR;
+
+    Tcl_DString fq;
+    Tcl_DStringInit(&fq);
+    Tcl_DStringAppend(&fq, nsName, -1);
+    Tcl_DStringAppend(&fq, "::", 2);
+    Tcl_DStringAppend(&fq, cmd->cmdName, -1);
+
+    Tcl_CreateObjCommand2(interp, Tcl_DStringValue(&fq), cmd->proc, NULL, NULL);
+    Tcl_DStringFree(&fq);
+
+    if (cmd->exportIt)
+    {
+        if (Tcl_Export(interp, ns, cmd->cmdName, 0) != TCL_OK)
+            return TCL_ERROR;
+    }
+    return TCL_OK;
+}
+
+/* --- public inits --- */
+
+int Tbcload_Init(Tcl_Interp* interp)
+{
+    return TbcloadInitInternal(interp, 0);
+}
+
+int Tbcload_SafeInit(Tcl_Interp* interp)
+{
+    return TbcloadInitInternal(interp, 1);
+}
+
+/* Common initializer */
+static int TbcloadInitInternal(Tcl_Interp* interp, int isSafe)
+{
+#ifdef USE_TCL_STUBS
+    if (!Tcl_InitStubs(interp, "9.0", 1))
+    {
+        return TCL_ERROR;
+    }
+#else
+    if (Tcl_PkgRequire(interp, "Tcl", "9.0", 1) == NULL)
+    {
+        return TCL_ERROR;
+    }
+#endif
+
+    /* Initialize loader core (from tbcload) */
+    if (TbcloadInit(interp) != TCL_OK)
+    { /* internal helper provided by tbcload */
+        return TCL_ERROR;
+    }
+
+    /* Use packageName "tbcload" also as namespace */
+    const char* nsName = packageName;
+
+    const CmdTable* ct = isSafe ? &safeCommands[0] : &commands[0];
+    for (; ct->cmdName; ct++)
+    {
+        if (RegisterCommand(interp, nsName, ct) != TCL_OK)
+        {
+            return TCL_ERROR;
+        }
+    }
+
+    return Tcl_PkgProvide(interp, packageName, packageVersion);
+}
+
+/* Utility */
+const char* TbcloadGetPackageName(void)
+{
+    return packageName;
 }
