@@ -368,7 +368,7 @@ static void InitTypes();
  *----------------------------------------------------------------------
  */
 
-int Tbcload_EvalObjCmd(void* dummy, Tcl_Interp* interp, Tcl_Size objc, Tcl_Obj* const objv[])
+int Tbcload_EvalObjCmd(void* dummy, Tcl_Interp* interp, int objc, Tcl_Obj* const objv[])
 {
     ImageSignature sig;
     Tcl_Obj* cmdObjPtr;
@@ -434,7 +434,7 @@ int Tbcload_EvalObjCmd(void* dummy, Tcl_Interp* interp, Tcl_Size objc, Tcl_Obj* 
  *----------------------------------------------------------------------
  */
 
-int Tbcload_ProcObjCmd(void* dummy, Tcl_Interp* interp, Tcl_Size objc, Tcl_Obj* const objv[])
+int Tbcload_ProcObjCmd(void* dummy, Tcl_Interp* interp, int objc, Tcl_Obj* const objv[])
 {
     return (*bcprocCmdProc)(dummy, interp, objc, objv);
 }
@@ -1933,10 +1933,10 @@ static Tcl_Obj* ExtractCompiledFile(Tcl_Interp* interp, char* codePtr, Tcl_Size 
     InitExtractEnv(newCodePtr, (codePtr + codeLength), &exEnv);
 
     /*
-     * Do not allow loading newer bytecodes into older interps
+     * Do not allow loading bytecodes across major versions or into older versions.
      */
-    if ((exEnv.sig.tclMajorVersion > tclMajorVersion) ||
-        ((exEnv.sig.tclMajorVersion == tclMajorVersion) && (exEnv.sig.tclMinorVersion > tclMinorVersion)))
+    if ((exEnv.sig.tclMajorVersion != tclMajorVersion) ||
+        (exEnv.sig.tclMinorVersion > tclMinorVersion))
     {
         char buf[128];
 
@@ -2212,7 +2212,7 @@ static int InitCompatibilityLayer(Tcl_Interp* interp)
 
 int TbcloadInit(Tcl_Interp* interp)
 {
-    if (!Tcl_InitStubs(interp, "9.0", 1))
+    if (!Tcl_InitStubs(interp, TCL_VERSION, 1))
     {
         return TCL_ERROR;
     }
@@ -2299,8 +2299,8 @@ static int ExtractJumptableInfo(Tcl_Interp* interp, ExtractionEnv* envPtr, AuxDa
             goto errorReturn;
         }
         hEntry = Tcl_CreateHashEntry(&infoPtr->hashTable, key, &new);
-        Tcl_Free(key);
-        Tcl_SetHashValue(hEntry, (char*)value);
+        Tcl_Free((char *)key);
+        Tcl_SetHashValue(hEntry, (char*)(intptr_t)value);
     }
 
     /*
