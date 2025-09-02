@@ -62,6 +62,7 @@ Tcl_FetchInternalRep(Tcl_Obj *objPtr, const Tcl_ObjType *type) {
         (Tcl_ObjInternalRep *)(&objPtr->internalRep)
         : NULL;
 }
+
 static inline void
 Tcl_FreeInternalRep(Tcl_Obj *objPtr) {
     if (objPtr->typePtr != NULL) {
@@ -71,6 +72,19 @@ Tcl_FreeInternalRep(Tcl_Obj *objPtr) {
 	objPtr->typePtr = NULL;
     }
 }
+
+static inline void
+Tcl_StoreInternalRep(Tcl_Obj *objPtr, const Tcl_ObjType *typePtr,
+                        const Tcl_ObjInternalRep *irPtr) {
+    Tcl_FreeInternalRep(objPtr);
+    /* When irPtr == NULL, just leave objPtr with no internalrep for typePtr */
+    if (irPtr) {
+        objPtr->internalRep.twoPtrValue.ptr1 = irPtr->twoPtrValue.ptr1;
+        objPtr->internalRep.twoPtrValue.ptr2 = irPtr->twoPtrValue.ptr2;
+        objPtr->typePtr = typePtr;
+    }
+}
+
 #endif /* TCL_MAJOR_VERSION < 8 */
 
 /*

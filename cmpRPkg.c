@@ -25,7 +25,7 @@ static char procCommand[] = CMP_PROC_COMMAND; /* "bcproc"  */
 typedef struct CmdTable
 {
     const char* cmdName;   /* unqualified, e.g. "bceval" */
-    Tcl_ObjCmdProc2* proc; /* implementation */
+    Tcl_ObjCmdProc* proc; /* implementation */
     int exportIt;          /* nonzero => export */
 } CmdTable;
 
@@ -62,7 +62,7 @@ static int RegisterCommand(Tcl_Interp* interp, const char* nsName, const CmdTabl
     Tcl_DStringAppend(&fq, "::", 2);
     Tcl_DStringAppend(&fq, cmd->cmdName, -1);
 
-    Tcl_CreateObjCommand2(interp, Tcl_DStringValue(&fq), cmd->proc, NULL, NULL);
+    Tcl_CreateObjCommand(interp, Tcl_DStringValue(&fq), cmd->proc, NULL, NULL);
     Tcl_DStringFree(&fq);
 
     if (cmd->exportIt)
@@ -89,12 +89,12 @@ int Tbcload_SafeInit(Tcl_Interp* interp)
 static int TbcloadInitInternal(Tcl_Interp* interp, int isSafe)
 {
 #ifdef USE_TCL_STUBS
-    if (!Tcl_InitStubs(interp, "9.0", 1))
+    if (!Tcl_InitStubs(interp, TCL_VERSION, 1))
     {
         return TCL_ERROR;
     }
 #else
-    if (Tcl_PkgRequire(interp, "Tcl", "9.0", 1) == NULL)
+    if (Tcl_PkgRequire(interp, "Tcl", TCL_VERSION, 1) == NULL)
     {
         return TCL_ERROR;
     }

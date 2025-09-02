@@ -28,8 +28,8 @@
  *----------------------------------------------------------------
  */
 
-EXTERN int Tbcload_EvalObjCmd(void* dummy, Tcl_Interp* interp, Tcl_Size objc, Tcl_Obj* const objv[]);
-EXTERN int Tbcload_ProcObjCmd(void* dummy, Tcl_Interp* interp, Tcl_Size objc, Tcl_Obj* const objv[]);
+EXTERN Tcl_ObjCmdProc Tbcload_EvalObjCmd;
+EXTERN Tcl_ObjCmdProc Tbcload_ProcObjCmd;
 EXTERN const char* TbcloadGetPackageName(void);
 
 EXTERN int Tbcload_Init(Tcl_Interp* interp);
