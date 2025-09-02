@@ -1,0 +1,58 @@
+#------------------------------------------------------------- -*- makefile -*-
+#
+# Makefile for tclcompiler
+#
+# Basic build, test and install
+#   nmake /f makefile.vc INSTALLDIR=c:\tcl TCLDIR=c:\path\to\tcl\source
+#   nmake /f makefile.vc INSTALLDIR=c:\tcl TCLDIR=c:\path\to\tcl\source
+#   nmake /f makefile.vc INSTALLDIR=c:\tcl TCLDIR=c:\path\to\tcl\source install
+#
+# For other build options (debug, static etc.),
+# See TIP 477 (https://core.tcl.tk/tips/doc/trunk/tip/477.md) for
+# detailed documentation.
+# 
+# See the file "LICENSE" for information on usage and redistribution
+# of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+PROJECT = tbcload
+NEED_TCL_SOURCE=1
+
+!include "rules-ext.vc"
+
+PRJ_OBJS = \
+	$(TMP_DIR)\cmpRead.obj  \
+	$(TMP_DIR)\cmpRPkg.obj
+
+PRJ_HEADERS = \
+	$(ROOT)\cmpInt.h \
+	$(ROOT)\proTbcLoad.h
+
+PRJ_DEFINES = -D_CRT_SECURE_NO_WARNINGS -DTCL_NO_DEPRECATED
+
+# We do not use the standard predefined install targets because we want
+# to load binaries from platform-specific subdirectories of the package
+# directory.
+DISABLE_TARGET_install = 1
+!include "$(_RULESDIR)\targets.vc"
+
+# Override binary installation directory
+!if "$(ARCH)" == "AMD64"
+BIN_INSTALL_DIR = $(SCRIPT_INSTALL_DIR)\win32-x86_64
+!else
+BIN_INSTALL_DIR = $(SCRIPT_INSTALL_DIR)\win32-ix86
+!endif
+
+install: pkgindex
+	@echo Installing to '$(SCRIPT_INSTALL_DIR)'
+	@if not exist "$(SCRIPT_INSTALL_DIR)" mkdir "$(SCRIPT_INSTALL_DIR)"
+	@if not exist "$(BIN_INSTALL_DIR)" mkdir "$(BIN_INSTALL_DIR)"
+	@$(CPY) $(PRJLIB) "$(BIN_INSTALL_DIR)" >NUL
+	@$(CPY) $(LIBDIR)\*.tcl "$(SCRIPT_INSTALL_DIR)"
+	@$(CPY) $(OUT_DIR)\pkgIndex.tcl "$(SCRIPT_INSTALL_DIR)"
+	@$(CPY) $(ROOT)\README.md "$(SCRIPT_INSTALL_DIR)"
+	@$(CPY) $(ROOT)\LICENSE "$(SCRIPT_INSTALL_DIR)"
+
+pkgindex: default-pkgindex-tea
+
+$(PRJ_OBJS): $(ROOT)\configure.ac $(PRJ_HEADERS)
+
