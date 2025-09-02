@@ -19,9 +19,59 @@
 #ifndef _CMPINT_H
 #define _CMPINT_H
 
+#include <stdint.h>
+#define HAVE_INTPTR_T
 #include "tclCompile.h"
 #include "tclInt.h"
 #include "tclPort.h"
+
+/*
+ * Polyfills for missing definitions in Tcl 8
+ */
+#if TCL_MAJOR_VERSION < 9
+#ifdef Tcl_Size
+#undef Tcl_Size
+#endif
+typedef int Tcl_Size;
+#define Tcl_GetSizeIntFromObj Tcl_GetIntFromObj
+#define Tcl_NewSizeIntObj Tcl_NewIntObj
+#define TCL_SIZE_MAX      INT_MAX
+#define TCL_SIZE_MODIFIER ""
+typedef union Tcl_ObjInternalRep {
+    long longValue;
+    double doubleValue;
+    void *otherValuePtr;
+    Tcl_WideInt wideValue;
+    struct {
+        void *ptr1;
+        void *ptr2;
+    } twoPtrValue;
+    struct {
+        void *ptr;
+        unsigned long value;
+    } ptrAndLongRep;
+} Tcl_ObjInternalRep;
+
+static inline int
+Tcl_HasInternalRep(Tcl_Obj *objPtr, const Tcl_ObjType *type) {
+    return objPtr->typePtr == type;
+}
+static inline Tcl_ObjInternalRep *
+Tcl_FetchInternalRep(Tcl_Obj *objPtr, const Tcl_ObjType *type) {
+    return Tcl_HasInternalRep(objPtr, type) ?
+        (Tcl_ObjInternalRep *)(&objPtr->internalRep)
+        : NULL;
+}
+static inline void
+Tcl_FreeInternalRep(Tcl_Obj *objPtr) {
+    if (objPtr->typePtr != NULL) {
+	if (objPtr->typePtr->freeIntRepProc != NULL) {
+	    objPtr->typePtr->freeIntRepProc(objPtr);
+	}
+	objPtr->typePtr = NULL;
+    }
+}
+#endif /* TCL_MAJOR_VERSION < 8 */
 
 /*
  * USE_CATCH_WRAPPER controls whether the emitted code has a catch around

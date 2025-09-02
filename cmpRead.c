@@ -1835,7 +1835,11 @@ static char* ExtractSignature(Tcl_Interp* interp, char* codePtr, char* codeEnd, 
         return NULL;
     }
     numScanned = sscanf(codePtr,
-                        CMP_SIGNATURE_HEADER " %ld %ld.%ld %ld.%ld%c",
+                        CMP_SIGNATURE_HEADER
+                        " %" TCL_SIZE_MODIFIER "d"
+                        " %" TCL_SIZE_MODIFIER "d.%" TCL_SIZE_MODIFIER "d"
+                        " %" TCL_SIZE_MODIFIER "d.%" TCL_SIZE_MODIFIER "d"
+                        "%c",
                         &signaturePtr->formatNumber,
                         &signaturePtr->cmpMajorVersion,
                         &signaturePtr->cmpMinorVersion,
@@ -1875,7 +1879,7 @@ static int CheckSignature(Tcl_Interp* interp, ImageSignature* signaturePtr)
     if (signaturePtr->formatNumber != formatVersion)
     {
         char buf[32];
-        sprintf(buf, "%ld", signaturePtr->formatNumber);
+        sprintf(buf, "%" TCL_SIZE_MODIFIER "d", signaturePtr->formatNumber);
         {
             Tcl_Obj* res = Tcl_GetObjResult(interp);
             Tcl_AppendToObj(res, "unsupported bytecode version: ", -1);
@@ -1939,7 +1943,9 @@ static Tcl_Obj* ExtractCompiledFile(Tcl_Interp* interp, char* codePtr, Tcl_Size 
         exEnv.codePtr = NULL;
         CleanupExtractEnv(&exEnv);
         sprintf(buf,
-                "unable to load bytecode generated for Tcl %ld.%ld into Tcl %ld.%ld",
+                "unable to load bytecode generated for Tcl "
+                "%" TCL_SIZE_MODIFIER "d.%" TCL_SIZE_MODIFIER "d into Tcl "
+                "%" TCL_SIZE_MODIFIER "d.%" TCL_SIZE_MODIFIER "d",
                 exEnv.sig.tclMajorVersion,
                 exEnv.sig.tclMinorVersion,
                 tclMajorVersion,
