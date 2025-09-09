@@ -47,7 +47,7 @@ install: pkgindex
 	@if not exist "$(SCRIPT_INSTALL_DIR)" mkdir "$(SCRIPT_INSTALL_DIR)"
 	@if not exist "$(BIN_INSTALL_DIR)" mkdir "$(BIN_INSTALL_DIR)"
 	@$(CPY) $(PRJLIB) "$(BIN_INSTALL_DIR)" >NUL
-	@$(CPY) $(LIBDIR)\*.tcl "$(SCRIPT_INSTALL_DIR)"
+	@if exist "$(LIBDIR)" $(CPY) $(LIBDIR)\*.tcl "$(SCRIPT_INSTALL_DIR)"
 	@$(CPY) $(OUT_DIR)\pkgIndex.tcl "$(SCRIPT_INSTALL_DIR)"
 	@$(CPY) $(ROOT)\README.md "$(SCRIPT_INSTALL_DIR)"
 	@$(CPY) $(ROOT)\LICENSE "$(SCRIPT_INSTALL_DIR)"
