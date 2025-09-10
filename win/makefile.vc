@@ -29,28 +29,7 @@ PRJ_HEADERS = \
 
 PRJ_DEFINES = -D_CRT_SECURE_NO_WARNINGS -DTCL_NO_DEPRECATED
 
-# We do not use the standard predefined install targets because we want
-# to load binaries from platform-specific subdirectories of the package
-# directory.
-DISABLE_TARGET_install = 1
 !include "$(_RULESDIR)\targets.vc"
-
-# Override binary installation directory
-!if "$(ARCH)" == "AMD64"
-BIN_INSTALL_DIR = $(SCRIPT_INSTALL_DIR)\win32-x86_64
-!else
-BIN_INSTALL_DIR = $(SCRIPT_INSTALL_DIR)\win32-ix86
-!endif
-
-install: pkgindex
-	@echo Installing to '$(SCRIPT_INSTALL_DIR)'
-	@if not exist "$(SCRIPT_INSTALL_DIR)" mkdir "$(SCRIPT_INSTALL_DIR)"
-	@if not exist "$(BIN_INSTALL_DIR)" mkdir "$(BIN_INSTALL_DIR)"
-	@$(CPY) $(PRJLIB) "$(BIN_INSTALL_DIR)" >NUL
-	@if exist "$(LIBDIR)" $(CPY) $(LIBDIR)\*.tcl "$(SCRIPT_INSTALL_DIR)"
-	@$(CPY) $(OUT_DIR)\pkgIndex.tcl "$(SCRIPT_INSTALL_DIR)"
-	@$(CPY) $(ROOT)\README.md "$(SCRIPT_INSTALL_DIR)"
-	@$(CPY) $(ROOT)\LICENSE "$(SCRIPT_INSTALL_DIR)"
 
 pkgindex: default-pkgindex-tea
 
