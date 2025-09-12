@@ -95,30 +95,6 @@ Tcl_StoreInternalRep(Tcl_Obj *objPtr, const Tcl_ObjType *typePtr,
 #define USE_CATCH_WRAPPER 0
 
 /*
- * When version numbers change here, must also go into the following files
- * and update the version numbers:
- *
- * src/configure.in
- * src/makefile.bc
- * src/makefile.vc
- *
- * The release level should be  0 for alpha, 1 for beta, and 2 for
- * final/patch.  The release serial value is the number that follows the
- * "a", "b", or "p" in the patch level; for example, if the patch level
- * is 7.6b2, TCL_RELEASE_SERIAL is 2.  It restarts at 1 whenever the
- * release level is changed, except for the final release which is 0
- * (the first patch will start at 1).
- */
-
-#define CMP_MAJOR_VERSION 1
-#define CMP_MINOR_VERSION 9
-#define CMP_RELEASE_LEVEL 0
-#define CMP_RELEASE_SERIAL 0
-
-#define CMP_VERSION "1.9"
-#define CMP_PATCH_LEVEL "1.9.0"
-
-/*
  * This macro includes code that emits and reads the location map for a
  * ByteCode struct. The location map is useful only if the source is shipped
  * (which does not happen currently), but we need to populate a location
