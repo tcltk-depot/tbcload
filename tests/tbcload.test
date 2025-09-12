@@ -8,9 +8,13 @@ if {"::tcltest" ni [namespace children]} {
 package require tbcload
 namespace eval ::tcltest {}
 
+set tclMajorVersion [lindex [split [info tclversion] .] 0]
 set testDir [file normalize [file dirname [info script]]]
 # The compiler writes outputs to tclcompiler-1.9.0/tests/out
 set compOut [file join [file dirname [file dirname $testDir]] tclcompiler tests out]
+if {![file isdirectory $compOut]} {
+    set compOut [file join $testDir tbcfiles$tclMajorVersion]
+}
 set tbc1 [file join $compOut tc1.tbc]
 set tbc2 [file join $compOut tc2.tbc]
 set tbc3 [file join $compOut tc3.tbc]
@@ -29,6 +33,7 @@ set tbc1_default [file join [file dirname [file dirname $compOut]] tests tc1.tbc
 ::tcltest::testConstraint have_tbc_6 [file exists $tbc6]
 ::tcltest::testConstraint have_tbc_1pre [file exists $tbc1pre]
 ::tcltest::testConstraint have_tbc_1def [file exists $tbc1_default]
+puts D:$tbc1_default
 
 # Helper to capture output produced by 'puts' while sourcing/execing .tbc
 proc with_captured_puts {body} {
@@ -90,6 +95,12 @@ test tbcload-1.8 {error from loaded proc surfaces} -constraints have_tbc_5 -body
     catch {boom} msg
     return $msg
 } -result {boom}
+
+test tbcload-incompat {error from loading incompatible Tcl version} -setup {
+    set tbc [file join $testDir tbcfiles[expr {$tclMajorVersion == 9 ? 8 : 9}] tc1.tbc]
+} -body {
+    list [catch {source $tbc} result] $result
+} -result [list 1 {unable to load bytecode generated for Tcl *}] -match glob
 
 ::tcltest::cleanupTests
 
