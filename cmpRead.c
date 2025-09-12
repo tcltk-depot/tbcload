@@ -1837,7 +1837,7 @@ static char* ExtractSignature(Tcl_Interp* interp, char* codePtr, char* codeEnd, 
     numScanned = sscanf(codePtr,
                         CMP_SIGNATURE_HEADER
                         " %" TCL_SIZE_MODIFIER "d"
-                        " %" TCL_SIZE_MODIFIER "d.%" TCL_SIZE_MODIFIER "d"
+                        " %" TCL_SIZE_MODIFIER "d.%" TCL_SIZE_MODIFIER "d%*c%*d"
                         " %" TCL_SIZE_MODIFIER "d.%" TCL_SIZE_MODIFIER "d"
                         "%c",
                         &signaturePtr->formatNumber,
