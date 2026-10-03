@@ -96,6 +96,19 @@ test tbcload-1.8 {error from loaded proc surfaces} -constraints have_tbc_5 -body
     return $msg
 } -result {boom}
 
+# A loaded script's ByteCode is freed once evaluated; the procs it defined
+# keep their own. Reloading over and over must leave them intact.
+test tbcload-2.1 {repeated loads keep the procs they define} \
+        -constraints {have_tbc_3 have_tbc_6} -body {
+    for {set i 0} {$i < 500} {incr i} {
+        source $tbc3
+        source $tbc6
+        set junk [lrepeat 100 [string repeat x $i]]
+        set r [list [mytest {1 2 3}] [demo::getx]]
+    }
+    set r
+} -result {123 42}
+
 test tbcload-incompat {error from loading incompatible Tcl version} -setup {
     set tbc [file join $testDir tbcfiles[expr {$tclMajorVersion == 9 ? 8 : 9}] tc1.tbc]
 } -body {
