@@ -2366,7 +2366,7 @@ static int ExtractDictUpdateInfo(Tcl_Interp* interp, ExtractionEnv* envPtr, AuxD
         return result;
     }
 
-    infoPtr = (DictUpdateInfo*)Tcl_Alloc((unsigned)(sizeof(DictUpdateInfo) + numVar * sizeof(int)));
+    infoPtr = (DictUpdateInfo*)Tcl_Alloc((unsigned)(sizeof(DictUpdateInfo) + numVar * sizeof(infoPtr->varIndices[0])));
     infoPtr->length = numVar;
 
     for (i = 0; i < numVar; i++)
@@ -2468,7 +2468,7 @@ static int ExtractNewForeachInfo(Tcl_Interp* interp, ExtractionEnv* envPtr, AuxD
             goto errorReturn;
         }
 
-        varListPtr = (ForeachVarList*)Tcl_Alloc((unsigned)sizeof(ForeachVarList) + numVars * sizeof(int));
+        varListPtr = (ForeachVarList*)Tcl_Alloc((unsigned)sizeof(ForeachVarList) + numVars * sizeof(varListPtr->varIndexes[0]));
         infoPtr->varLists[i] = varListPtr;
         varListPtr->numVars = numVars;
 
