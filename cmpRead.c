@@ -820,7 +820,10 @@ static int ExtractTclSize(Tcl_Interp* interp, ExtractionEnv* envPtr, Tcl_Size* v
 
     /* Slice token into a Tcl_Obj and parse as Tcl_Size */
     Tcl_Obj* tok = Tcl_NewStringObj(codePtr, (Tcl_Size)(endPtr - codePtr));
-    if (Tcl_GetSizeIntFromObj(interp, tok, valuePtr) != TCL_OK)
+    Tcl_IncrRefCount(tok);
+    int result = Tcl_GetSizeIntFromObj(interp, tok, valuePtr);
+    Tcl_DecrRefCount(tok);
+    if (result != TCL_OK)
     {
         AppendErrorLocation(interp, envPtr);
         return TCL_ERROR;
@@ -1391,7 +1394,11 @@ static Tcl_Obj* ExtractObject(Tcl_Interp* interp, ExtractionEnv* envPtr)
 
             envPtr->curImagePtr = localExEnv.curImagePtr;
 
-            localExEnv.codePtr = NULL;
+            /*
+             * Drop the extraction environment's reference; the object now
+             * holds its own.
+             */
+
             CleanupExtractEnv(&localExEnv);
         }
         else if (typeCode == CMP_PROCBODY_CODE)
@@ -1427,7 +1434,11 @@ static Tcl_Obj* ExtractObject(Tcl_Interp* interp, ExtractionEnv* envPtr)
                 Tcl_IncrRefCount(objPtr);
             }
 
-            localExEnv.codePtr = NULL;
+            /*
+             * The proc body holds its own reference to the ByteCode (or has
+             * released it on error); drop the extraction environment's.
+             */
+
             CleanupExtractEnv(&localExEnv);
         }
         else
@@ -1975,7 +1986,12 @@ static Tcl_Obj* ExtractCompiledFile(Tcl_Interp* interp, char* codePtr, Tcl_Size 
     ir.twoPtrValue.ptr2 = NULL;
     Tcl_StoreInternalRep(objPtr, cmpByteCodeType, &ir);
     exEnv.codePtr->refCount++;
-    exEnv.codePtr = NULL;
+
+    /*
+     * Drop the extraction environment's reference; the object now holds its
+     * own, so the ByteCode is freed with it.
+     */
+
     CleanupExtractEnv(&exEnv);
 
     return objPtr;
